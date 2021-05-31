@@ -31,7 +31,7 @@ if __name__ == '__main__':
     listener = Listener()
 
     # Create a NatNet client with IP address of your local network interface
-    client = MotionClient(listener, ip_local='127.0.0.1')
+    client = MotionClient(listener, ip_local='132.68.36.149', ip_multicast='239.255.42.99', ip_server='132.68.36.158')
 
     # Data of rigid bodies and markers delivered via listener on a separate thread
     client.get_data()
