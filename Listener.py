@@ -2,23 +2,32 @@
 
 from natnet import MotionListener, MotionClient
 import requests
+from enum import Enum
 
 SERVER_IP = '132.68.36.158'
 BROADCAST_IP = '239.255.42.99'
+
+
+class ListenerType(Enum):
+    Local = 0
+    Remote = 1
 
 
 class Listener(MotionListener):
     """
     A class of callback functions that are invoked with information from NatNet server.
     """
-    def __init__(self):
+    def __init__(self, type=ListenerType.Remote):
         super(Listener, self).__init__()
         self.bodies = []
         self.labeled_markers = []
         self.unlabeled_markers = []
         self.callback = lambda t, arg1, arg2, arg3: print(f"received new data: {len(arg1)} bodies and {len(arg2+arg3)} markers at time {t}")
         self.data_changed = lambda t: self.callback(t, self.bodies, self.labeled_markers, self.unlabeled_markers)
-        self.client = MotionClient(self, ip_local=self.get_public_ip(), ip_multicast=BROADCAST_IP, ip_server=SERVER_IP)
+        if type == ListenerType.Local:
+            self.client = MotionClient(self, ip_local='127.0.0.1')
+        else:
+            self.client = MotionClient(self, ip_local=self.get_public_ip(), ip_multicast=BROADCAST_IP, ip_server=SERVER_IP)
 
     def set_callback(self, cb):
         self.callback = cb

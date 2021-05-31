@@ -1,7 +1,7 @@
-from Listener import Listener
+from Listener import Listener, ListenerType
 
 # Create listener
-listener = Listener()
+listener = Listener(ListenerType.Remote)
 
 
 # set a custom callback on the listener
