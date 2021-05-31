@@ -142,21 +142,16 @@ class MotionClient(object):
         #  https://github.com/paparazzi/paparazzi/blob/master/sw/ground_segment/python/natnet3.x/NatNetClient.py
 
         # create UDP socket
-        socket_data = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        try:
-            socket_data.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        except AttributeError:
-            pass
+        result = socket.socket(socket.AF_INET,  # Internet
+                               socket.SOCK_DGRAM,
+                               socket.IPPROTO_UDP)  # UDP
 
-        socket_data.bind((self._multicast_ip, port))
+        result.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        result.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                          socket.inet_aton(self._multicast_ip) + socket.inet_aton(self._local_ip))
 
-        client_ip = self._local_ip or socket.gethostbyname(socket.gethostname())
-
-        client = socket.inet_aton(client_ip)
-        membership = socket.inet_aton(self._multicast_ip) + client
-        socket_data.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, client)
-        socket_data.setsockopt(socket.SOL_IP, socket.IP_ADD_MEMBERSHIP, membership)
-        return socket_data
+        result.bind((self._local_ip, port))
+        return result
 
     def _data_callback(self, data_socket, timeout=0.1):
         """ Continuously receive and process messages. """
@@ -187,7 +182,7 @@ class MotionClient(object):
         # recv throws an exception as it fails to receive data from the cleared buffer
         while True:
             try:
-                data_socket.recv(1, socket.MSG_DONTWAIT)
+                data_socket.recv(1)
             except IOError:
                 break
 
