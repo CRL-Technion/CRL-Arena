@@ -22,15 +22,10 @@ class Listener(MotionListener):
         self.bodies = []
         self.labeled_markers = []
         self.unlabeled_markers = []
-        self.callback = lambda t, arg1, arg2, arg3: print(f"received new data: {len(arg1)} bodies and {len(arg2+arg3)} markers at time {t}")
-        self.data_changed = lambda t: self.callback(t, self.bodies, self.labeled_markers, self.unlabeled_markers)
         if type == ListenerType.Local:
             self.client = MotionClient(self, ip_local='127.0.0.1')
         else:
             self.client = MotionClient(self, ip_local=self.get_public_ip(), ip_multicast=BROADCAST_IP, ip_server=SERVER_IP)
-
-    def set_callback(self, cb):
-        self.callback = cb
 
     def start(self):
         self.client.get_data()
@@ -48,21 +43,18 @@ class Listener(MotionListener):
     def on_rigid_body(self, bodies, time_info):
         # print('RigidBodies {}'.format(bodies))
         self.bodies = bodies
-        self.data_changed(time_info.timestamp)
 
     def on_skeletons(self, skeletons, time_info):
+        pass
         # print('Skeletons {}'.format(skeletons))
-        self.data_changed(time_info.timestamp)
 
     def on_labeled_markers(self, markers, time_info):
         # print('Labeled marker {}'.format(markers))
         self.labeled_markers = markers
-        self.data_changed(time_info.timestamp)
 
     def on_unlabeled_markers(self, markers, time_info):
         # print('Unlabeled marker {}'.format(markers))
         self.unlabeled_markers = markers
-        self.data_changed(time_info.timestamp)
 
 
 if __name__ == '__main__':
