@@ -35,6 +35,7 @@ class Visualizer():
         self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=1, cmap=self.cMap, norm=norm)
         self.fig.canvas.draw()
         self.fig.show()
+        plt.show()
 
     def render(self):
         data = self.grid
@@ -49,8 +50,6 @@ class Visualizer():
         # t_end = time.time()
         plt.pause(1)
 
-    def dirty_print(self):
-        print(self.grid)
 
     def xy_to_cell(self, loc):
         #convert x and y to new coordinates
@@ -76,4 +75,5 @@ if __name__ == "__main__":
 
     v = Visualizer()
     v.initialize_heatmap()
-    v.render()
+
+    #v.render()
