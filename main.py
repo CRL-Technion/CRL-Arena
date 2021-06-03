@@ -1,16 +1,17 @@
 import matplotlib.pyplot as plt
 
 from Listener import Listener, ListenerType
-from Visualizer import Visualizer
-from MapMaker import MapMaker
+
+from Grid import Grid
 
 # Create listener
 listener = Listener(ListenerType.Local)
-vis = Visualizer()
-vis.initialize_heatmap()
+grid = Grid()
+grid.plot_init_heatmap()
 
 # start the listener
 listener.start()
+
 
 # stop the listener TODO not working...
 # listener.stop()
@@ -18,13 +19,15 @@ listener.start()
 # the main loop for plotting the environment
 while True:
     bodies = listener.bodies
-    vis.reset_grid()
+    grid.reset_grid()
     for body in bodies:
         print("new body")
         id = body.body_id
         loc = [body.position.x, body.position.y]
-        vis.add_coord(loc, id)
-        cell_loc = vis.xy_to_cell(loc)
+        grid.add_coord(loc, id)
+        cell_loc = grid.xy_to_cell(loc)
         print(cell_loc)
-    vis.render()
+    grid.plot_render()
+    grid.make_map()
+    grid.make_scene()
     plt.pause(0.1)

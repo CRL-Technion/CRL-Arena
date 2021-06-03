@@ -2,7 +2,6 @@ import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-from MapMaker import MapMaker
 import time
 from natnet.protocol import RigidBody, LabeledMarker, Position, Rotation
 import random
@@ -52,9 +51,12 @@ class Grid:
         self.fig.show()
 
     def plot_render(self):
+        print("HERE")
         #re-plot grid with up-to-date values; should be called after updating/adding values
         data = self.grid
         # t_start = time.time()
+        if self.heatmap == None:
+            self.plot_init_heatmap()
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=1, cmap=self.cMap, norm=norm)
@@ -89,7 +91,7 @@ class Grid:
         f.write("map\n")
         for i in range(int(self.rows)):
             for j in range(int(self.cols)):
-                if self.grid[i][j] == 0: #empty space
+                if self.grid[i][j] == 0 or self.grid[i][j] == 1: #empty space
                     f.write('.')
                 elif self.grid[i][j] == 2: #obstacle
                     f.write('@')
@@ -115,7 +117,7 @@ class Grid:
     def make_scene(self):
         #for each ROBOT on the grid (meaning its grid value is 1), make a line with all its info
         f = open(self.scenefile, "w")
-        f.write("version 1z")
+        f.write("version 1\n")
         for i in range(int(self.rows)):
             for j in range(int(self.cols)):
                 if self.grid[i][j] == 1:
@@ -134,7 +136,4 @@ class Grid:
                     f.write('PLACEHOLDER\n')
         f.close()
 
-g = Grid()
-g.add_coord([1, 3], 101)
-g.add_coord([5, 5], 101)
-g.make_scene()
+
