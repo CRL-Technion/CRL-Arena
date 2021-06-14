@@ -263,13 +263,13 @@ class Protocol(object):
         # Version 2 and later
         shift, marker_error = self.read_value(data, offset, FloatValue)
         offset += shift
-        print('Marker Error: {}'.format(marker_error))
+        # print('Marker Error: {}'.format(marker_error))
 
         # Version 2.6 and later
         shift, param = self.read_value(data, offset, ShortValue)
         offset += shift
         tracking_valid = (param & 0x01) != 0
-        print('Tracking Valid: {}'.format(tracking_valid))
+        # print('Tracking Valid: {}'.format(tracking_valid))
 
         rigid_body = RigidBody(body_id, position, rotation)
 
@@ -311,7 +311,7 @@ class Protocol(object):
 
         shift, skeleton_id = self.read_value(data, offset, UIntValue)
         offset += shift
-        print('ID {}'.format(skeleton_id))
+        # print('ID {}'.format(skeleton_id))
 
         shift, bodies = self.unpack_rigid_bodies(data[offset:])
         offset += shift
@@ -331,7 +331,7 @@ class Protocol(object):
         offset = 0
         shift, skeleton_count = self.read_value(data, offset, UIntValue)
         offset += shift
-        print('Skeleton Count: {}'.format(skeleton_count))
+        # print('Skeleton Count: {}'.format(skeleton_count))
 
         skeletons = []
         for i in range(0, skeleton_count):
@@ -354,7 +354,7 @@ class Protocol(object):
         offset = 0
         shift, marker_set_count = self.read_value(data, offset, UIntValue)
         offset += shift
-        print('Marker Set Count: {}'.format(marker_set_count))
+        # print('Marker Set Count: {}'.format(marker_set_count))
 
         marker_sets = []
 
@@ -362,7 +362,7 @@ class Protocol(object):
             # Model name
             shift, model_name = self.read_string(data, offset)
             offset += shift
-            print('Model Name: {}'.format(model_name))
+            # print('Model Name: {}'.format(model_name))
 
             shift, positions = self.unpack_positions(data[offset:])
             marker_sets.append(MarkerSet(model_name, positions))
@@ -484,7 +484,7 @@ class Protocol(object):
 
         shift, name = self.read_string(data, offset)
         offset += shift
-        print('Marker set Name: {}'.format(name))
+        # print('Marker set Name: {}'.format(name))
 
         shift, marker_count = self.read_value(data, offset, IntValue)
         offset += shift
@@ -492,7 +492,7 @@ class Protocol(object):
         for i in range(0, marker_count):
             shift, name = self.read_string(data, offset)
             offset += shift
-            print('\tMarker Name: {}'.format(name))
+            # print('\tMarker Name: {}'.format(name))
 
         return offset
 
@@ -503,7 +503,7 @@ class Protocol(object):
         # Version 2.0 or higher
         shift, name = self.read_string(data, offset)
         offset += shift
-        print('\tRigidBody Name: {}'.format(name))
+        # print('\tRigidBody Name: {}'.format(name))
 
         shift, rigid_id = self.read_value(data, offset, IntValue)
         offset += shift
@@ -517,7 +517,7 @@ class Protocol(object):
         # Version 3.0 and higher, rigid body marker information contained in description
         shift, marker_count = self.read_value(data, offset, UIntValue)
         offset += shift
-        print('\tRigidBody Marker Count: {}'.format(marker_count))
+        # print('\tRigidBody Marker Count: {}'.format(marker_count))
 
         marker_count_range = range(0, marker_count)
         for marker in marker_count_range:
@@ -535,7 +535,7 @@ class Protocol(object):
 
         shift, name = self.read_string(data, offset)
         offset += shift
-        print('Marker Name: {}'.format(name))
+        # print('Marker Name: {}'.format(name))
 
         shift, skeleton_id = self.read_value(data, offset, IntValue)
         offset += shift

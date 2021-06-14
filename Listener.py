@@ -22,6 +22,7 @@ class Listener(MotionListener):
         self.bodies = []
         self.labeled_markers = []
         self.unlabeled_markers = []
+        self.marker_sets = []
         if type == ListenerType.Local:
             self.client = MotionClient(self, ip_local='127.0.0.1')
         else:
@@ -56,6 +57,8 @@ class Listener(MotionListener):
         # print('Unlabeled marker {}'.format(markers))
         self.unlabeled_markers = markers
 
+    def on_marker_sets(self, marker_sets, time_info):
+        self.marker_sets = marker_sets
 
 if __name__ == '__main__':
     # Create listener

@@ -70,6 +70,18 @@ class MotionListener(object):
         """
         pass
 
+    def on_marker_sets(self, marker_sets, time_info):
+        """
+        Callback for NatNet marker_sets update. It is called once per frame.
+
+        Args:
+            marker_sets (list[:class:`MarkerSet`]): a list of Position elements of unlabeled marker
+            time_info (:class:`TimeInfo`): time as a TimeInfo element
+        """
+        pass
+
+
+
 
 class Adapter(object):
     def __init__(self, listener):
@@ -84,7 +96,7 @@ class Adapter(object):
 
     # Unpack data from a motion capture frame message
     def _unpack_motion_capture(self, data):
-        print('Begin MoCap Frame\n-----------------\n')
+        #print('Begin MoCap Frame\n-----------------\n')
 
         # access the internal buffers of an object
         data = memoryview(data)
@@ -93,7 +105,7 @@ class Adapter(object):
         # Frame number
         shift, frame_number = self._protocol.read_value(data, offset, UIntValue)
         offset += shift
-        print('Frame #: {}'.format(frame_number))
+        #print('Frame #: {}'.format(frame_number))
 
         # Marker sets
         shift, marker_sets = self._protocol.unpack_marker_sets(data[offset:])
@@ -149,6 +161,9 @@ class Adapter(object):
         # Send unlabeled markers to listener
         self._listener.on_unlabeled_markers(unlabeled_markers, time_info)
 
+        # Send marker sets
+        self._listener.on_marker_sets(marker_sets, time_info)
+
     # Unpack a data description packet
     def _unpack_description(self, data):
         offset = 0
@@ -173,14 +188,14 @@ class Adapter(object):
             print('NatNetClient struct error: {}'.format(traceback.format_exc()))
 
     def _process_message_safe(self, data):
-        print('Begin Packet\n------------\n')
+        #print('Begin Packet\n------------\n')
         offset = 0
         shift, message_id = self._protocol.read_value(data, offset, UShortValue)
         offset += shift
-        print('Message ID: {}'.format(message_id))
+        #print('Message ID: {}'.format(message_id))
 
         shift, packet_size = self._protocol.read_value(data, offset, UShortValue)
-        print('Packet Size: {}'.format(packet_size))
+        #print('Packet Size: {}'.format(packet_size))
         offset += shift
 
         if message_id == NAT_FRAME_OF_DATA:
@@ -206,7 +221,7 @@ class Adapter(object):
         else:
             print('ERROR: Unrecognized packet type')
 
-        print('End Packet\n----------\n')
+        #print('End Packet\n----------\n')
 
     def get_version(self):
         command_string = 'Ping'

@@ -167,7 +167,8 @@ class MotionClient(object):
                 if len(data):
                     self._adapter.process_message(data)
             except (KeyboardInterrupt, SystemExit, OSError):
-                print('Exiting data socket')
+                pass
+                #print('Exiting data socket')
 
             except socket.timeout:
                 print('NatNetClient socket timeout!')
