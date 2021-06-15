@@ -2,6 +2,7 @@ import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from statistics import mode
 import time
 
 from matplotlib.widgets import Button
@@ -9,8 +10,12 @@ from matplotlib.widgets import Button
 from natnet.protocol import RigidBody, LabeledMarker, Position, Rotation
 import random
 
-def poo():
-    print("POO")
+import itertools
+from shapely.geometry import LineString
+
+
+
+
 
 
 class Grid:
@@ -31,7 +36,7 @@ class Grid:
         # variables related to matplotlib visualization
         self.fig = None
         self.ax = None
-        self.cMap = mpl.colors.ListedColormap(['w', 'r', 'k', 'g', 'y'])
+        self.cMap = mpl.colors.ListedColormap(['w', 'r', 'k', 'y', 'c', 'm'])
         self.heatmap = None
 
         # variables related to exporting map and scene files
@@ -44,6 +49,54 @@ class Grid:
         self.grid = []
         for i in range(int(self.rows)):
             self.grid.append([0 for i in range(int(self.cols))])
+
+    def getBlockedCells(self, vertices_list, dr=0.01): #TODO: make it so that this only uses the outer vertices??? waste of time if there's a body with a lot of inner markers
+        blocked_cells = []
+        for pair in itertools.product(vertices_list, repeat=2):
+            line_blocked_cells = self.lineGridIntersection(pair[0], pair[1], dr)
+            #blocked_cells.append(line_blocked_cells)
+            blocked_cells += line_blocked_cells
+        return list(set(blocked_cells))
+
+    def add_body(self, type, body_coords):
+        #if type is obstacle, then paint all the cells
+        if type == 2: #obstacle
+            blocked_cells = self.getBlockedCells(body_coords)
+            for coord in blocked_cells:
+               self.grid[coord[0]][coord[1]] = 1
+        elif type == 1: #robot
+            relevant_cells = [self.xy_to_cell(coord) for coord in body_coords]
+            mode_cell = mode(relevant_cells)
+            majority_count = len(relevant_cells) / 2
+            print(relevant_cells)
+            if relevant_cells.count(mode_cell) >= majority_count: #TODO: add some tolerance adjustability here
+                #just highlight one cell in the grid
+                self.grid[mode_cell[0]][mode_cell[1]] = 2
+            else:
+                #highlight all the cells it touches
+                for cell in relevant_cells:
+                    self.grid[cell[0]][cell[1]] = 3
+            #if half or more than half of markers are in the same cell, then paint that one cell one color
+            #otherwise, paint the rest of the cells another color
+
+
+    def lineGridIntersection(self, p1, p2, dr):
+        ls = LineString([p1, p2])
+        points_on_line = []
+        # for f in range(0, int(np.ceil(ls.length)) + 1):
+        # linespace = [x * dr for x in range(0, int(np.ceil(ls.length)) + 1)]
+        line_length = np.ceil(ls.length)
+        num_samples = int(line_length / dr)
+        linespace = [x * dr for x in range(0, num_samples + 1)]
+        for f in linespace:
+            p = ls.interpolate(f).coords[0]
+
+            points_on_line.append(p)
+
+        ar = np.array(points_on_line, 'f')
+
+        cells = list(map(lambda p: self.xy_to_cell(p), ar))
+        return cells
 
     def plot_init_heatmap(self):
         # initialize heatmap to be used to display the plot; should be called before plot_render()
@@ -67,11 +120,11 @@ class Grid:
         self.fig.show()
 
     def plot_render(self):
-        print("HERE")
+
         # re-plot grid with up-to-date values; should be called after updating/adding values
         data = self.grid
         # t_start = time.time()
-        data[self.origin_cell[0]][self.origin_cell[1]] = 3
+        data[self.origin_cell[0]][self.origin_cell[1]] = 5
         if self.heatmap == None:
             self.plot_init_heatmap()
         bounds = range(self.cMap.N)

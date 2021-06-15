@@ -6,7 +6,7 @@ from Grid import Grid
 
 # Create listener
 listener = Listener(ListenerType.Local)
-grid = Grid(cell_size=1)
+grid = Grid(cell_size=.25)
 grid.plot_init_heatmap()
 
 # start the listener
@@ -26,17 +26,18 @@ while True:
         if name == "all":
             continue
         print("Name:", name)
-        body_type = "obstacle" if "obstacle" in name.lower() else 'robot'  # TODO should be enum and probably more robust parsing
+        body_type = 2 if "obstacle" in name.lower() else 1  # TODO should be enum and probably more robust parsing
         markers = ms.positions
         #get list of all cells it touches
         #for obstacles, paint all cells it touches
         #for robots, paint the cells with majority points, and if they're all the same paint it green
+        set_coords = []
         for mi, marker_pos in enumerate(markers):
             loc = [marker_pos.x, marker_pos.y]
-            print("location marker #{mi}: ", loc)
-            grid.add_coord(loc, body_type)
-            cell_loc = grid.xy_to_cell(loc)
-            print(cell_loc)
+            set_coords.append(loc)
+            # print("location marker #{mi}: ", loc)
+        grid.add_body(body_type, set_coords)
+
     grid.plot_render()
     # grid.make_map()
     # grid.make_scen()
