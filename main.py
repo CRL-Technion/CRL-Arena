@@ -3,10 +3,11 @@ import matplotlib.pyplot as plt
 from Listener import Listener, ListenerType
 
 from Grid import Grid
+import time
 
 # Create listener
 listener = Listener(ListenerType.Local)
-grid = Grid(cell_size=.25)
+grid = Grid(cell_size=.5)
 grid.plot_init_heatmap()
 
 # start the listener
@@ -41,4 +42,5 @@ while True:
     grid.plot_render()
     # grid.make_map()
     # grid.make_scen()
-    plt.pause(1)
+    # plt.pause(2)
+    time.sleep(1)
