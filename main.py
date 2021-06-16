@@ -29,9 +29,9 @@ while True:
         print("Name:", name)
         body_type = 2 if "obstacle" in name.lower() else 1  # TODO should be enum and probably more robust parsing
         markers = ms.positions
-        #get list of all cells it touches
-        #for obstacles, paint all cells it touches
-        #for robots, paint the cells with majority points, and if they're all the same paint it green
+        # get list of all cells it touches
+        # for obstacles, paint all cells it touches
+        # for robots, paint the cells with majority points, and if they're all the same paint it green
         set_coords = []
         for mi, marker_pos in enumerate(markers):
             loc = [marker_pos.x, marker_pos.y]

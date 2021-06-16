@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from statistics import mode
 import time
+import astar
 
 from matplotlib.widgets import Button
 
@@ -14,6 +15,7 @@ import itertools
 from shapely.geometry import LineString
 from enum import Enum
 
+
 class CellVal(Enum):
     EMPTY = 0
     ORIGIN = 1
@@ -22,15 +24,16 @@ class CellVal(Enum):
     OBSTACLE_REAL = 4
     OBSTACLE_ART = 5 #artificial obstacle
 
+
 class Grid:
     # A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file
     def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='my_map.map', scen_filename:str= 'my_scene.scen'):
         # arena dimensions (within greater 12x12 scope)
-        self.x_dim = min(x_dim, 12) #m
-        self.y_dim = min(y_dim, 12) #m
-        self.cell_size = cell_size #m
-        self.rows = int(12 / cell_size)
-        self.cols = int(12 / cell_size)
+        self.x_dim = min(x_dim, 12)  # m
+        self.y_dim = min(y_dim, 12)  # m
+        self.cell_size = cell_size  # m
+        self.rows = int(12 / cell_size)  # TODO shouldn't this be x_dim instead of 12?
+        self.cols = int(12 / cell_size)  # TODO shouldn't this be y_dim instead of 12?
         self.origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
 
         # the grid itself with values
@@ -58,30 +61,29 @@ class Grid:
         blocked_cells = []
         for pair in itertools.product(vertices_list, repeat=2):
             line_blocked_cells = self.lineGridIntersection(pair[0], pair[1], dr)
-            #blocked_cells.append(line_blocked_cells)
+            # blocked_cells.append(line_blocked_cells)
             blocked_cells += line_blocked_cells
         return list(set(blocked_cells))
 
     def add_body(self, type, body_coords):
-        #if type is obstacle, then color all the cells it touches
+        # if type is obstacle, then color all the cells it touches
         if type == 2: #obstacle
             blocked_cells = self.getBlockedCells(body_coords)
             for coord in blocked_cells:
                self.grid[coord[0]][coord[1]] = CellVal.OBSTACLE_REAL.value
-        #if type is robot, then if it's mostly concentrated on one cell color it, if it's spread out color all of them
+        # if type is robot, then if it's mostly concentrated on one cell color it, if it's spread out color all of them
         elif type == 1: #robot
             relevant_cells = [self.xy_to_cell(coord) for coord in body_coords]
             mode_cell = mode(relevant_cells)
             majority_count = len(relevant_cells) / 2
             print(relevant_cells)
             if relevant_cells.count(mode_cell) >= majority_count: #TODO: add some tolerance adjustability here
-                #just highlight one cell in the grid
+                # just highlight one cell in the grid
                 self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
             else:
-                #highlight all the cells it touches
+                # highlight all the cells it touches
                 for cell in relevant_cells:
                     self.grid[cell[0]][cell[1]] = CellVal.ROBOT_PARTIAL.value
-
 
     def lineGridIntersection(self, p1, p2, dr):
         ls = LineString([p1, p2])
@@ -100,28 +102,27 @@ class Grid:
         return cells
 
     def restrict_arena(self):
-        #goal: place artificial obstacles around the perimeter of our desired arena
+        # goal: place artificial obstacles around the perimeter of our desired arena
         x = int(self.x_dim / self.cell_size)
         y = int(self.y_dim / self.cell_size)
-        #identify corners
+        # corners
         top_right = [(self.origin_cell[0] - y // 2), self.origin_cell[1] + x // 2]
         bottom_right = [(self.origin_cell[0] + y // 2), self.origin_cell[1] + x // 2]
         top_left = [(self.origin_cell[0] - y // 2), self.origin_cell[1] - x // 2]
         bottom_left = [(self.origin_cell[0] + y // 2), self.origin_cell[1] - x // 2]
         corners = [top_left, top_right, bottom_right, bottom_left]
         borders = corners
-        for i in range(top_left[1], top_right[1]): #top border
+        for i in range(top_left[1], top_right[1]): # top border
             borders.append([top_right[0], i])
-        for i in range(bottom_left[1], bottom_right[1]): #bottom border
+        for i in range(bottom_left[1], bottom_right[1]): # bottom border
             borders.append([bottom_right[0], i])
-        for i in range(top_left[0], bottom_left[0]): #left border
+        for i in range(top_left[0], bottom_left[0]): # left border
             borders.append([i, bottom_left[1]])
-        for i in range(top_right[0], bottom_right[0]): #right border
+        for i in range(top_right[0], bottom_right[0]): # right border
             borders.append([i, bottom_right[1]])
-        #indicate all relevant cells in the grid
+        # indicate all relevant cells in the grid
         for cell in borders:
             self.grid[cell[0]][cell[1]] = CellVal.OBSTACLE_ART.value
-
 
     def plot_init_heatmap(self):
         # initialize heatmap to be used to display the plot; should be called before plot_render()
@@ -139,7 +140,7 @@ class Grid:
         # re-plot grid with up-to-date values; should be called after updating/adding values
         self.restrict_arena()
         data = self.grid
-        #color origin cell
+        # color origin cell
         data[self.origin_cell[0]][self.origin_cell[1]] = CellVal.ORIGIN.value
         if self.heatmap == None:
             self.plot_init_heatmap()
@@ -190,21 +191,6 @@ class Grid:
             f.write('\n')
         f.close()
 
-    def get_empty_spot(self):
-        try_x = -1
-        try_y = -1
-        while True:
-            try_x = random.randint(0, self.cols)
-            try_y = random.randint(0, self.rows)
-            if self.grid[try_x][try_y] != 0:
-                continue
-            for coord in self.endspots: # now need to make sure no two ending spots align
-                if coord[0] == try_x and coord[1] == try_y:
-                    continue
-            break
-        self.endspots.append([try_x, try_y])
-        return try_x, try_y
-
     def make_scen(self, event=None):
         # for each ROBOT on the grid (meaning its grid value is 1), make a line with all its info
         f = open(self.scenfile, "w")
@@ -224,7 +210,76 @@ class Grid:
                     x, y = self.get_empty_spot()
                     f.write(str(x) + '\t' + str(y) + '\t')
                     # distance thing??
-                    f.write('PLACEHOLDER\n')
+                    f.write(f'{self.get_optimal_length((i, j), (x, y))}\n')
         f.close()
+
+    def get_empty_spot(self):
+        try_x = -1
+        try_y = -1
+        while True:
+            try_x = random.randint(0, self.cols)
+            try_y = random.randint(0, self.rows)
+            if self.grid[try_x][try_y] != 0:
+                continue
+            for coord in self.endspots: # now need to make sure no two ending spots align
+                if coord[0] == try_x and coord[1] == try_y:
+                    continue
+            break
+        self.endspots.append([try_x, try_y])
+        return try_x, try_y
+
+    def get_optimal_length(self, loc1, loc2):
+        path = list(astar.find_path(loc1, loc2,
+                                    neighbors_fnct=lambda loc: env.neighbors(loc, True),
+                                    heuristic_cost_estimate_fnct=env.heuristic,
+                                    distance_between_fnct=env.distance))
+
+        dist = 0
+        prev = path[0]
+        for p in path[1:]:
+            dist += self.distance(prev, p)
+            prev = p
+
+        return dist
+
+    def neighbors(self, loc, diagonal_moves=False):
+        moves = [
+            np.array([0, 1]),
+            np.array([1, 0]),
+            np.array([0, -1]),
+            np.array([-1, 0])
+        ]
+        if diagonal_moves:
+            moves += [
+                np.array([1, 1]),
+                np.array([-1, 1]),
+                np.array([1, -1]),
+                np.array([-1, -1])
+            ]
+        neighbors = []
+        for move in moves:
+            new_loc = np.array(loc) + move
+            if 0 <= new_loc[0] <= self.cols-1 and 0 <= new_loc[1] <= self.rows-1 and self.grid[new_loc[0]][new_loc[1]] == 0:
+                neighbors.append(tuple(new_loc))
+
+        return neighbors
+
+    def heuristic(self, loc, goal):
+        return np.linalg.norm(np.array(loc)-np.array(goal), 2)
+
+    def distance(self, loc1, loc2):
+        return np.linalg.norm(np.array(loc1)-np.array(loc2), 2)
+
+
+if __name__ == "__main__":
+    # Testing the optimal length function
+    env = Grid(12, 12)
+    m, n = env.rows, env.cols
+    start_x = np.random.randint(0, m)
+    start_y = np.random.randint(0, n)
+    goal_x = np.random.randint(0, m)
+    goal_y = np.random.randint(0, n)
+
+    print(env.get_optimal_length((start_x, start_y), (goal_x, goal_y)))
 
 
