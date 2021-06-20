@@ -27,7 +27,8 @@ while True:
         if name == "all":
             continue
         print("Name:", name)
-        body_type = 2 if "obstacle" in name.lower() else 1  # TODO should be enum and probably more robust parsing
+        # body_type = 2 if "obstacle" in name.lower() else 1  # TODO should be enum and probably more robust parsing
+        body_type = -1 if "obst" in name.lower() else int(name[name.index('-')+1::])
         markers = ms.positions
         # get list of all cells it touches
         # for obstacles, paint all cells it touches

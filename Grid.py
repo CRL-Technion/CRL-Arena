@@ -51,11 +51,15 @@ class Grid:
         self.scenfile = scen_filename
         self.endspots = []
 
+        #association of robots with their ID
+        self.bots = {}
+
     def reset_grid(self):
         # reset the grid so that all values are 0 (meaning nothing is in the box)
         self.grid = []
         for i in range(int(self.rows)):
             self.grid.append([CellVal.EMPTY.value for i in range(int(self.cols))])
+        self.bots = {}
 
     def getBlockedCells(self, vertices_list, dr=0.01): #TODO: make it so that this only uses the outer vertices??? waste of time if there's a body with a lot of inner markers
         blocked_cells = []
@@ -65,21 +69,32 @@ class Grid:
             blocked_cells += line_blocked_cells
         return list(set(blocked_cells))
 
-    def add_body(self, type, body_coords):
+    def add_body(self, type, body_coords, tolerance=1):
+        #a word on tolerance: it describes how "strict" the system will be with requiring a robot to be in one cell in order to count it as a robot
+        #   tolerance of 0: zero tolerance, all of a robot's markers must be in one cell
+        #   tolerance of 1: all markers but one should be in the same cell
+        #   tolerance of 2: higher flexibility, just goes with the majority\
+        #if the robot's configuration is outside of the specified tolerance, it will highlight all the cells the robot touches
         # if type is obstacle, then color all the cells it touches
-        if type == 2: #obstacle
+        if type == -1: #obstacle
             blocked_cells = self.getBlockedCells(body_coords)
             for coord in blocked_cells:
                self.grid[coord[0]][coord[1]] = CellVal.OBSTACLE_REAL.value
         # if type is robot, then if it's mostly concentrated on one cell color it, if it's spread out color all of them
-        elif type == 1: #robot
+        else: #robot
             relevant_cells = [self.xy_to_cell(coord) for coord in body_coords]
             mode_cell = mode(relevant_cells)
             majority_count = len(relevant_cells) / 2
             print(relevant_cells)
-            if relevant_cells.count(mode_cell) >= majority_count: #TODO: add some tolerance adjustability here
-                # just highlight one cell in the grid
+            if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):#all cells are in one
                 self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                self.bots[type] = [mode_cell[0], mode_cell[1]]
+            elif tolerance <= 1 and relevant_cells.count(mode_cell) >= len(relevant_cells) - 1:#all cells but one are in the same cell
+                self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                self.bots[type] = [mode_cell[0], mode_cell[1]]
+            elif tolerance == 2 and relevant_cells.count(mode_cell) >= majority_count:#majority cells are in the same cell
+                self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                self.bots[type] = [mode_cell[0], mode_cell[1]]
             else:
                 # highlight all the cells it touches
                 for cell in relevant_cells:
@@ -168,13 +183,6 @@ class Grid:
         y = -loc[1]
         return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
 
-    def add_coord(self, loc: list, body_type: str):  # TODO should be enum
-        # convert the coordinate to cell coordinates
-        newloc = self.xy_to_cell(loc)
-        if body_type == "robot":  # then the first number is a 1, making it a robot
-            self.grid[newloc[0]][newloc[1]] = 1
-        elif body_type == "obstacle":  # then the first number is a 2, making it an obstacle
-            self.grid[newloc[0]][newloc[1]] = 2
 
     def make_map(self, event=None):
         f = open(self.mapfile, "w")
@@ -195,23 +203,24 @@ class Grid:
         # for each ROBOT on the grid (meaning its grid value is 1), make a line with all its info
         f = open(self.scenfile, "w")
         f.write("version 1\n")
-        for i in range(int(self.rows)):
-            for j in range(int(self.cols)):
-                if self.grid[i][j] == CellVal.ROBOT_FULL.value:
-                    # bucket
-                    f.write('0\t')
-                    # .map file name
-                    f.write(str(self.mapfile) + '\t')
-                    # dimensions of the grid
-                    f.write(str(int(self.rows)) + '\t' + str(int(self.cols)) + '\t')
-                    # starting position
-                    f.write(str(i) + '\t' + str(j) + '\t')
-                    # ending position
-                    x, y = self.get_empty_spot()
-                    f.write(str(x) + '\t' + str(y) + '\t')
-                    # distance thing??
-                    f.write(f'{self.get_optimal_length((i, j), (x, y))}\n')
+        for key, value in self.bots.items():
+            # bucket
+            f.write(str(key)+'\t')
+            print("writing out", key)
+            # .map file name
+            f.write(str(self.mapfile) + '\t')
+            # dimensions of the grid
+            f.write(str(int(self.rows)) + '\t' + str(int(self.cols)) + '\t')
+            # starting position
+            f.write(str(value[0]) + '\t' + str(value[1]) + '\t')
+            # ending position
+            x, y = self.get_empty_spot()
+            f.write(str(x) + '\t' + str(y) + '\t')
+            # optimal distance
+            f.write("\n")
+            # f.write(f'{self.get_optimal_length((i, j), (x, y))}\n')
         f.close()
+        print("should be done")
 
     def get_empty_spot(self):
         try_x = -1
@@ -230,9 +239,9 @@ class Grid:
 
     def get_optimal_length(self, loc1, loc2):
         path = list(astar.find_path(loc1, loc2,
-                                    neighbors_fnct=lambda loc: env.neighbors(loc, True),
-                                    heuristic_cost_estimate_fnct=env.heuristic,
-                                    distance_between_fnct=env.distance))
+                                    neighbors_fnct=lambda loc: self.neighbors(loc, True),
+                                    heuristic_cost_estimate_fnct=self.heuristic,
+                                    distance_between_fnct=self.distance))
 
         dist = 0
         prev = path[0]
