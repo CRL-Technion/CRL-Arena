@@ -89,7 +89,7 @@ class Grid:
             if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):#all cells are in one
                 self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
                 self.bots[type] = [mode_cell[0], mode_cell[1]]
-            elif tolerance <= 1 and relevant_cells.count(mode_cell) >= len(relevant_cells) - 1:#all cells but one are in the same cell
+            elif tolerance == 1 and relevant_cells.count(mode_cell) >= len(relevant_cells) - 1:#all cells but one are in the same cell
                 self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
                 self.bots[type] = [mode_cell[0], mode_cell[1]]
             elif tolerance == 2 and relevant_cells.count(mode_cell) >= majority_count:#majority cells are in the same cell
