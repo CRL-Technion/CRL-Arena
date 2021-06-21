@@ -44,7 +44,7 @@ while True:
             loc = [marker_pos.x, marker_pos.y]
             set_coords.append(loc)
             # print("location marker #{mi}: ", loc)
-        grid.add_body(body_type, set_coords, tolerance=2)
+        grid.add_body(body_type, set_coords, tolerance=0)
     time.sleep(1)
 
     grid.plot_render()

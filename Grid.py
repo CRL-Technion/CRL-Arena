@@ -43,7 +43,7 @@ class Grid:
         # variables related to matplotlib visualization
         self.fig = None
         self.ax = None
-        self.cMap = mpl.colors.ListedColormap(['w', 'r', 'k', 'y', 'c', 'm']) #TODO: fix colors and map nicely to cellval values
+        self.cMap = mpl.colors.ListedColormap([(1,1,1), (0,0,0), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)]) #TODO: fix colors and map nicely to cellval values
         self.heatmap = None
 
         # variables related to exporting map and scene files
@@ -145,7 +145,7 @@ class Grid:
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         data = self.grid
-        self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=1, cmap=self.cMap, norm=norm)
+        self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=1, cmap=self.cMap, vmin=0, vmax=5)
         self.fig.canvas.draw()
         plt.gca().invert_yaxis()
         self.fig.show()
@@ -156,12 +156,12 @@ class Grid:
         self.restrict_arena()
         data = self.grid
         # color origin cell
-        data[self.origin_cell[0]][self.origin_cell[1]] = CellVal.ORIGIN.value
+        # data[self.origin_cell[0]][self.origin_cell[1]] = CellVal.ORIGIN.value
         if self.heatmap == None:
             self.plot_init_heatmap()
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
-        self.heatmap = self.ax.pcolormesh(data, edgecolors='k', linewidths=1, cmap=self.cMap, norm=norm)
+        self.heatmap = self.ax.pcolormesh(data, edgecolors='k', linewidths=1, cmap=self.cMap, vmin=0, vmax=5)
 
         axprev = plt.axes([0.7, 0.02, 0.1, 0.075])
         axnext = plt.axes([0.81, 0.02, 0.1, 0.075])
@@ -216,6 +216,7 @@ class Grid:
             f.write(str(value[0]) + '\t' + str(value[1]) + '\t')
             # ending position
             x, y = self.get_empty_spot()
+            print("recieved", x, y)
             f.write(str(x) + '\t' + str(y) + '\t')
             # optimal distance
             f.write("\n")
@@ -224,17 +225,20 @@ class Grid:
         print("should be done")
 
     def get_empty_spot(self):
+        x = int(self.x_dim / self.cell_size)
+        y = int(self.y_dim / self.cell_size)
         try_x = -1
         try_y = -1
         while True:
-            try_x = random.randint(0, self.cols)
-            try_y = random.randint(0, self.rows)
-            if self.grid[try_x][try_y] != 0:
+            try_x = random.randint(self.origin_cell[1] - x // 2, self.origin_cell[1] + x // 2)
+            try_y = random.randint((self.origin_cell[0] - y // 2), (self.origin_cell[0] + y // 2))
+            if self.grid[try_y][try_x] != 0:
                 continue
             for coord in self.endspots: # now need to make sure no two ending spots align
-                if coord[0] == try_x and coord[1] == try_y:
+                if coord[1] == try_x and coord[0] == try_y:
                     continue
             break
+        print(try_x, try_y)
         self.endspots.append([try_x, try_y])
         return try_x, try_y
 

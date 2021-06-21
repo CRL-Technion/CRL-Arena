@@ -5,7 +5,8 @@ import os
 import argparse
 
 # Multicast address
-MULTICAST_ADDRESS = '239.255.255.250'
+# MULTICAST_ADDRESS = '239.255.42.99'
+MULTICAST_ADDRESS = '132.68.36.158'
 
 # Broadcast interval in seconds. Use 0.01 for 10ms intervals (100 Hz)
 INTERVAL = 5
@@ -40,12 +41,12 @@ class Server(object):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        # self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
         # Set the time-to-live for messages to 1 so they do not go past the local network segment.
-        ttl = struct.pack('B', 1)
-        self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+        # ttl = struct.pack('B', 1)
+        # self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        # self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
     def send_frame(self, frame):
         address = (self._multicast_address, self._data_port)
@@ -69,6 +70,6 @@ if __name__ == '__main__':
     server = Server(args.multicast)
 
     while True:
-        print('broadcast')
+        print('sending')
         server.send_frame(frame)
         time.sleep(args.interval)
