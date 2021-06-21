@@ -8,7 +8,7 @@ class UDPServer:
     def __init__(self):
         self.localIP = "132.68.36.158"
         self.localPort = 20001
-        self.bufferSize = 1024
+        self.bufferSize = 32768
         self.UDPServerSocket = None
         self._data_thread = None
         self._data = None

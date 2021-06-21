@@ -9,7 +9,7 @@ import time
 
 # Create listener
 listener = Listener(ListenerType.Local)
-grid = Grid(cell_size=.5)
+grid = Grid(cell_size=0.5)
 grid.plot_init_heatmap()
 
 # start the listener
@@ -44,7 +44,7 @@ while True:
             loc = [marker_pos.x, marker_pos.y]
             set_coords.append(loc)
             # print("location marker #{mi}: ", loc)
-        grid.add_body(body_type, set_coords, tolerance=0)
+        grid.add_body(body_type, set_coords, tolerance=2)
     time.sleep(1)
 
     grid.plot_render()
