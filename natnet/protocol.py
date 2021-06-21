@@ -50,6 +50,13 @@ class Position(object):
     def __repr__(self):
         return 'Position(x={}, y={}, z={})'.format(self.x, self.y, self.z)
 
+    def to_dict(self):
+        return {
+            "x": self.x,
+            "y": self.y,
+            "z": self.z
+        }
+
 
 class Rotation(object):
     """
@@ -101,6 +108,11 @@ class MarkerSet(object):
 
     def __repr__(self):
         return 'MarkerSet(name={}, positions={})'.format(self.name, self.positions)
+
+    def to_dict(self):
+        return {"name": self.name,
+            "positions": [p.to_dict() for p in self.positions]}
+
 
 
 class RigidBody(object):

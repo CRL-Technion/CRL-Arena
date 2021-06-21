@@ -85,7 +85,7 @@ class Grid:
             relevant_cells = [self.xy_to_cell(coord) for coord in body_coords]
             mode_cell = mode(relevant_cells)
             majority_count = len(relevant_cells) / 2
-            print(relevant_cells)
+            # print(relevant_cells)
             if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):#all cells are in one
                 self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
                 self.bots[type] = [mode_cell[0], mode_cell[1]]
@@ -203,6 +203,7 @@ class Grid:
         # for each ROBOT on the grid (meaning its grid value is 1), make a line with all its info
         f = open(self.scenfile, "w")
         f.write("version 1\n")
+        print(self.bots)
         for key, value in self.bots.items():
             # bucket
             f.write(str(key)+'\t')
