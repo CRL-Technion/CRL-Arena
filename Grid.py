@@ -53,6 +53,8 @@ class Grid:
 
         #association of robots with their ID
         self.bots = {}
+        self.bad_bots = [] #simple list of all robots that aren't completely on one cell
+        self.out_of_bounds_bots = [] #simple list of all robots that aren't completely within the bounds of the arena
 
     def reset_grid(self):
         # reset the grid so that all values are 0 (meaning nothing is in the box)
@@ -60,6 +62,7 @@ class Grid:
         for i in range(int(self.rows)):
             self.grid.append([CellVal.EMPTY.value for i in range(int(self.cols))])
         self.bots = {}
+        self.bad_bots = []
 
     def getBlockedCells(self, vertices_list, dr=0.01): #TODO: make it so that this only uses the outer vertices??? waste of time if there's a body with a lot of inner markers
         blocked_cells = []
@@ -83,22 +86,32 @@ class Grid:
         # if type is robot, then if it's mostly concentrated on one cell color it, if it's spread out color all of them
         else: #robot
             relevant_cells = [self.xy_to_cell(coord) for coord in body_coords]
-            mode_cell = mode(relevant_cells)
-            majority_count = len(relevant_cells) / 2
-            # print(relevant_cells)
-            if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):#all cells are in one
-                self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
-                self.bots[type] = [mode_cell[0], mode_cell[1]]
-            elif tolerance == 1 and relevant_cells.count(mode_cell) >= len(relevant_cells) - 1:#all cells but one are in the same cell
-                self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
-                self.bots[type] = [mode_cell[0], mode_cell[1]]
-            elif tolerance == 2 and relevant_cells.count(mode_cell) >= majority_count:#majority cells are in the same cell
-                self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
-                self.bots[type] = [mode_cell[0], mode_cell[1]]
-            else:
-                # highlight all the cells it touches
-                for cell in relevant_cells:
-                    self.grid[cell[0]][cell[1]] = CellVal.ROBOT_PARTIAL.value
+            #check if the robot is out of bounds
+            in_bounds = True
+            for cell in relevant_cells:
+                x = int(self.x_dim / self.cell_size)
+                y = int(self.y_dim / self.cell_size)
+                if (cell[0] > (self.origin_cell[0] + y // 2) or cell[0] < (self.origin_cell[0] - y // 2)) or cell[1] > (self.origin_cell[1] + x // 2 or cell[1]) < (self.origin_cell[1] - x // 2):
+                    self.out_of_bounds_bots.append(type)
+                    in_bounds = False
+                    break
+            if in_bounds:
+                mode_cell = mode(relevant_cells)
+                majority_count = len(relevant_cells) / 2
+                if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):#all cells are in one
+                    self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    self.bots[type] = [mode_cell[0], mode_cell[1]]
+                elif tolerance == 1 and relevant_cells.count(mode_cell) >= len(relevant_cells) - 1:#all cells but one are in the same cell
+                    self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    self.bots[type] = [mode_cell[0], mode_cell[1]]
+                elif tolerance == 2 and relevant_cells.count(mode_cell) >= majority_count:#majority cells are in the same cell
+                    self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    self.bots[type] = [mode_cell[0], mode_cell[1]]
+                else:
+                    self.bad_bots.append(type) #add its id to the list of bad robots
+                    # highlight all the cells it touches
+                    for cell in relevant_cells:
+                        self.grid[cell[0]][cell[1]] = CellVal.ROBOT_PARTIAL.value
 
     def lineGridIntersection(self, p1, p2, dr):
         ls = LineString([p1, p2])
@@ -152,6 +165,8 @@ class Grid:
 
     def plot_render(self):
 
+        if len(self.out_of_bounds_bots) > 0:
+            print("the following robots are out of bounds and will not be shown in the visualization: ", self.out_of_bounds_bots)
         # re-plot grid with up-to-date values; should be called after updating/adding values
         self.restrict_arena()
         data = self.grid
@@ -174,6 +189,8 @@ class Grid:
         self.ax.draw_artist(self.heatmap)
         self.fig.canvas.blit(self.ax.bbox)
         self.fig.canvas.flush_events()
+        #plt.text(1, 1, "01", size=10, ha="center", va="center", bbox=dict(boxstyle="round", ec=(1., 0.5, 0.5), fc=(1., 0.8, 0.8),))
+
         # t_end = time.time()
         plt.pause(0.2)
 
@@ -200,10 +217,12 @@ class Grid:
         f.close()
 
     def make_scen(self, event=None):
+        #first, warn the user that the scene file is incomplete if there are robots that aren't in cells
+        if len(self.bad_bots) > 0:
+            print("Robots with the following ID's are not aligned with a single cell and won't be included in the .SCEN file: ", self.bad_bots)
         # for each ROBOT on the grid (meaning its grid value is 1), make a line with all its info
         f = open(self.scenfile, "w")
         f.write("version 1\n")
-        print(self.bots)
         for key, value in self.bots.items():
             # bucket
             f.write(str(key)+'\t')
@@ -229,7 +248,7 @@ class Grid:
         y = int(self.y_dim / self.cell_size)
         try_x = -1
         try_y = -1
-        while True:
+        while True: #choose within borders of arena, not the 12x12
             try_x = random.randint(self.origin_cell[1] - x // 2, self.origin_cell[1] + x // 2)
             try_y = random.randint((self.origin_cell[0] - y // 2), (self.origin_cell[0] + y // 2))
             if self.grid[try_y][try_x] != 0:
