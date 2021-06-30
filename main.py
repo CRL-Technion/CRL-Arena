@@ -3,13 +3,21 @@ import matplotlib.pyplot as plt
 from Listener import Listener, ListenerType
 from udp_server import UDPServer
 import json
+import sys
 
 from Grid import Grid
 import time
 
+CELL_SIZE = .66
+
 # Create listener
 listener = Listener(ListenerType.Local)
-grid = Grid(cell_size=0.5)
+if len(sys.argv) == 2:
+    grid = Grid(cell_size = float(sys.argv[1]))
+elif CELL_SIZE == None:
+    grid = Grid()
+else:
+    grid = Grid(cell_size = CELL_SIZE)
 grid.plot_init_heatmap()
 
 # start the listener

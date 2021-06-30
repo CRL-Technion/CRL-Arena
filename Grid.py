@@ -27,7 +27,7 @@ class CellVal(Enum):
 
 class Grid:
     # A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file
-    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='my_map.map', scen_filename:str= 'my_scene.scen'):
+    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='my_map.map', scen_filename:str= 'my_scene.scen', from_scen = False):
         # arena dimensions (within greater 12x12 scope)
         self.x_dim = min(x_dim, 12)  # m
         self.y_dim = min(y_dim, 12)  # m
@@ -52,9 +52,13 @@ class Grid:
         self.endspots = []
 
         #association of robots with their ID
-        self.bots = {}
+        self.bots = {} #maps bot IDs to current spot
+        self.end_bots = {} #maps bot ID's to end spot (if one exists)
         self.bad_bots = [] #simple list of all robots that aren't completely on one cell
         self.out_of_bounds_bots = [] #simple list of all robots that aren't completely within the bounds of the arena
+        self.bot_boxes = [] #all the text boxes representing robots
+        self.end_boxes = [] #all the text boxes representing the robots' end locations
+
 
     def reset_grid(self):
         # reset the grid so that all values are 0 (meaning nothing is in the box)
@@ -177,7 +181,25 @@ class Grid:
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         self.heatmap = self.ax.pcolormesh(data, edgecolors='k', linewidths=1, cmap=self.cMap, vmin=0, vmax=5)
-
+        for key, value in self.bots.items():
+            new = True
+            for text in self.bot_boxes:
+                if plt.getp(text, 'text') == str(key):
+                    new = False
+                    text.set_position((-6.855 + .325 * self.cell_size + .65*(value[1]* self.cell_size), 11.48 - 0.43*self.cell_size - 0.86*(value[0]* self.cell_size)))
+            if new:
+            # newtxt= plt.text(.04 * self.cell_size * value[1], 1 - .05 * self.cell_size * value[0], 'A', transform=self.ax.transAxes, fontsize=16 * self.cell_size, fontweight='bold', va='center', ha='center')
+                newtxt = plt.text(-6.855 + .325 * self.cell_size + .65*(value[1]* self.cell_size), 11.48 - 0.43*self.cell_size - 0.86*(value[0]* self.cell_size), str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(0, 1, 0)))
+                self.bot_boxes.append(newtxt)
+        for key, value in self.end_bots.items():
+            new = True
+            for text in self.end_boxes:
+                if plt.getp(text, 'text') == str(key):
+                    new = False
+                    text.set_position((-6.855 + .325 * self.cell_size + .65*(value[1]* self.cell_size), 11.48 - 0.43*self.cell_size - 0.86*(value[0]* self.cell_size)))
+            if new:
+                newtxt = plt.text(-6.855 + .325 * self.cell_size + .65*(value[1]* self.cell_size), 11.48 - 0.43*self.cell_size - 0.86*(value[0]* self.cell_size), str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1, .8, 0.8)))
+                self.end_boxes.append(newtxt)
         axprev = plt.axes([0.7, 0.02, 0.1, 0.075])
         axnext = plt.axes([0.81, 0.02, 0.1, 0.075])
         bnext = Button(axnext, 'Map')
@@ -189,7 +211,16 @@ class Grid:
         self.ax.draw_artist(self.heatmap)
         self.fig.canvas.blit(self.ax.bbox)
         self.fig.canvas.flush_events()
-        #plt.text(1, 1, "01", size=10, ha="center", va="center", bbox=dict(boxstyle="round", ec=(1., 0.5, 0.5), fc=(1., 0.8, 0.8),))
+        #for each robot, check if there's already a text box. if there is, change it. if there isn't, add one
+        # for text in self.textboxes:
+        #     # print("new text that says", text.get_s())
+        #     text.set_visible(False)
+        #     print(plt.getp(text, 'text'))
+        # # for key, value in self.end_bots.items():
+        #     # plt.text(-6.53 + .65*(value[0]+1), 11.05 - 0.86*(value[1]-1), str(key), size=13 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1., 0.8, 0.8), ))
+        #     newtxt = plt.text(-6.53 + .65*(value[1]), 11.05 - 0.86*(value[0]), str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1., 0.8, 0.8)))
+        #     self.textboxes.append(newtxt)
+
 
         # t_end = time.time()
         plt.pause(0.2)
@@ -223,7 +254,10 @@ class Grid:
         # for each ROBOT on the grid (meaning its grid value is 1), make a line with all its info
         f = open(self.scenfile, "w")
         f.write("version 1\n")
+        count = 0
+        self.end_bots = {}
         for key, value in self.bots.items():
+            count+=1
             # bucket
             f.write(str(key)+'\t')
             print("writing out", key)
@@ -232,9 +266,10 @@ class Grid:
             # dimensions of the grid
             f.write(str(int(self.rows)) + '\t' + str(int(self.cols)) + '\t')
             # starting position
-            f.write(str(value[0]) + '\t' + str(value[1]) + '\t')
+            f.write(str(value[1]) + '\t' + str(value[0]) + '\t')
             # ending position
             x, y = self.get_empty_spot()
+            self.end_bots[key] = [y, x]
             print("recieved", x, y)
             f.write(str(x) + '\t' + str(y) + '\t')
             # optimal distance
@@ -249,16 +284,17 @@ class Grid:
         try_x = -1
         try_y = -1
         while True: #choose within borders of arena, not the 12x12
-            try_x = random.randint(self.origin_cell[1] - x // 2, self.origin_cell[1] + x // 2)
-            try_y = random.randint((self.origin_cell[0] - y // 2), (self.origin_cell[0] + y // 2))
+            try_x = random.randint((self.origin_cell[1] - x // 2)+1, self.origin_cell[1] + x // 2)
+            try_y = random.randint((self.origin_cell[0] - y // 2)+1, (self.origin_cell[0] + y // 2))
             if self.grid[try_y][try_x] != 0:
                 continue
             for coord in self.endspots: # now need to make sure no two ending spots align
                 if coord[1] == try_x and coord[0] == try_y:
                     continue
             break
-        print(try_x, try_y)
-        self.endspots.append([try_x, try_y])
+        print("choosing", try_x, try_y, "because its value is", self.grid[try_y][try_x])
+        #print(try_x, try_y)
+        self.endspots.append([try_y, try_x])
         return try_x, try_y
 
     def get_optimal_length(self, loc1, loc2):
