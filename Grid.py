@@ -16,6 +16,7 @@ import itertools
 from shapely.geometry import LineString
 from enum import Enum
 
+from paths_to_plan_func import paths_to_plan
 
 class CellVal(Enum):
     EMPTY = 0
@@ -282,9 +283,11 @@ class Grid:
         y = -loc[1]
         return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
 
-    def run_planner(self, event=None):
+    def run_planner(self, plan=True, event=None):
+        #make plan parameter false if you only want to export the paths file (and don't want to convert to plan)
         os.system('wsl ~/CBSH2-RTC/cbs -m {0} -a {1} -o test.csv --outputPaths={2} -k 2 -t 60'.format(self.mapfile, self.scenfile, self.pathsfile))
         self.has_paths = True
+        paths_to_plan(paths=self.pathsfile)
 
     def make_map(self, event=None):
         f = open(self.mapfile, "w")
