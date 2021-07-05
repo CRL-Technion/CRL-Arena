@@ -5,6 +5,7 @@ from matplotlib.colors import ListedColormap
 from statistics import mode
 import time
 import astar
+import os
 
 from matplotlib.widgets import Button
 
@@ -27,7 +28,7 @@ class CellVal(Enum):
 
 class Grid:
     # A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file
-    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='my_map.map', scen_filename:str= 'my_scene.scen', from_scen = False):
+    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='my_map.map', scen_filename:str= 'my_scene.scen', paths_filename:str = 'paths.txt', from_scen = False):
         # arena dimensions (within greater 12x12 scope)
         self.x_dim = min(x_dim, 12)  # m
         self.y_dim = min(y_dim, 12)  # m
@@ -43,13 +44,17 @@ class Grid:
         # variables related to matplotlib visualization
         self.fig = None
         self.ax = None
-        self.cMap = mpl.colors.ListedColormap([(1,1,1), (0,0,0), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)]) #TODO: fix colors and map nicely to cellval values
+        self.cMap = mpl.colors.ListedColormap([(1,1,1), (0,0,0), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)])
         self.heatmap = None
+        self.anns = []
 
-        # variables related to exporting map and scene files
+        # variables related to exporting map and scene files and path file
         self.mapfile = map_filename
         self.scenfile = scen_filename
+        self.pathsfile = paths_filename
         self.endspots = []
+        self.has_paths = False
+
 
         #association of robots with their ID
         self.bots = {} #maps bot IDs to current spot
@@ -167,45 +172,91 @@ class Grid:
         plt.gca().invert_yaxis()
         self.fig.show()
 
+    def init_from_scene(self, event=None):
+        #takes an existing .scen file and initializes end spots from it
+        scen_file = open(self.scenfile, 'r')
+        for line in scen_file:
+            if line[0] == 'v':
+                continue
+            data = line.split('\t')
+            if int(data[0]) in self.bots:
+                self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
+
     def plot_render(self):
 
         if len(self.out_of_bounds_bots) > 0:
-            print("the following robots are out of bounds and will not be shown in the visualization: ", self.out_of_bounds_bots)
+            print("the following robots are out of bounds and will not be shownin the visualization: ", self.out_of_bounds_bots)
+        if self.heatmap == None:
+            self.plot_init_heatmap()
         # re-plot grid with up-to-date values; should be called after updating/adding values
         self.restrict_arena()
         data = self.grid
         # color origin cell
         # data[self.origin_cell[0]][self.origin_cell[1]] = CellVal.ORIGIN.value
-        if self.heatmap == None:
-            self.plot_init_heatmap()
+
+
+
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         self.heatmap = self.ax.pcolormesh(data, edgecolors='k', linewidths=1, cmap=self.cMap, vmin=0, vmax=5)
+
+        if self.has_paths:
+            for ann in self.anns:
+                ann.remove()
+            self.anns = []
+            #first, open paths file
+            # pathsfile = open('paths4.txt', 'r')
+            pathsfile = open(self.pathsfile, 'r')
+
+            #for each line, parse it and create a list of the coordinates
+            for line in pathsfile:
+                colon_idx = line.index(":")
+                path_string = line[colon_idx + 2::]
+                paths_list = path_string.split('->')
+                #draw lines between each two
+                paths_clean = []
+                for coord in paths_list:
+                    if coord == '\n' or coord == '':
+                        paths_list.remove(coord)
+                    else:
+                        clean = coord[1:-1]
+                        clean = clean.split(',')
+                        paths_clean.append(clean)
+                for i in range(len(paths_clean) - 1):
+                    ann = self.ax.annotate("", xy = (int(paths_clean[i][1]) + 0.5,int(paths_clean[i][0]) + 0.5), xytext=(int(paths_clean[i+1][1]) + 0.5,int(paths_clean[i+1][0])+0.5), arrowprops=dict(arrowstyle='-', connectionstyle='arc3'))
+                    # print("annotating from", (int(paths_clean[i][1]) + 0.5,int(paths_clean[i][0]) + 0.5), "to ", (int(paths_clean[i+1][1]) + 0.5,int(paths_clean[i+1][0])+0.5) )
+                    self.anns.append(ann)
+
         for key, value in self.bots.items():
             new = True
             for text in self.bot_boxes:
                 if plt.getp(text, 'text') == str(key):
                     new = False
-                    text.set_position((-6.855 + .325 * self.cell_size + .65*(value[1]* self.cell_size), 11.48 - 0.43*self.cell_size - 0.86*(value[0]* self.cell_size)))
+                    text.set_position((value[1] + 0.5, value[0] + 0.5))
             if new:
-            # newtxt= plt.text(.04 * self.cell_size * value[1], 1 - .05 * self.cell_size * value[0], 'A', transform=self.ax.transAxes, fontsize=16 * self.cell_size, fontweight='bold', va='center', ha='center')
-                newtxt = plt.text(-6.855 + .325 * self.cell_size + .65*(value[1]* self.cell_size), 11.48 - 0.43*self.cell_size - 0.86*(value[0]* self.cell_size), str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(0, 1, 0)))
+                newtxt = self.ax.text(value[1] + 0.5, value[0] + 0.5, str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(0, 1, 0)))
                 self.bot_boxes.append(newtxt)
         for key, value in self.end_bots.items():
             new = True
             for text in self.end_boxes:
                 if plt.getp(text, 'text') == str(key):
                     new = False
-                    text.set_position((-6.855 + .325 * self.cell_size + .65*(value[1]* self.cell_size), 11.48 - 0.43*self.cell_size - 0.86*(value[0]* self.cell_size)))
+                    text.set_position((value[1] + 0.5, value[0] + 0.5))
             if new:
-                newtxt = plt.text(-6.855 + .325 * self.cell_size + .65*(value[1]* self.cell_size), 11.48 - 0.43*self.cell_size - 0.86*(value[0]* self.cell_size), str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1, .8, 0.8)))
+                newtxt = self.ax.text(value[1] + 0.5, value[0] + 0.5, str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1, .8, 0.8)))
                 self.end_boxes.append(newtxt)
-        axprev = plt.axes([0.7, 0.02, 0.1, 0.075])
-        axnext = plt.axes([0.81, 0.02, 0.1, 0.075])
+        axplan = plt.axes([0.46, -0.01, 0.1, 0.075])
+        axinit = plt.axes([0.58, -0.01, 0.1, 0.075])
+        axprev = plt.axes([0.7, -0.01, 0.1, 0.075])
+        axnext = plt.axes([0.81, -0.01, 0.1, 0.075])
         bnext = Button(axnext, 'Map')
         bnext.on_clicked(self.make_map)
         bprev = Button(axprev, 'Scenario')
         bprev.on_clicked(self.make_scen)
+        binit = Button(axinit, 'Load')
+        binit.on_clicked(self.init_from_scene)
+        bplan = Button(axplan, 'Plan')
+        bplan.on_clicked(self.run_planner)
 
         self.ax.draw_artist(self.ax.patch)
         self.ax.draw_artist(self.heatmap)
@@ -231,6 +282,9 @@ class Grid:
         y = -loc[1]
         return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
 
+    def run_planner(self, event=None):
+        os.system('wsl ~/CBSH2-RTC/cbs -m {0} -a {1} -o test.csv --outputPaths={2} -k 2 -t 60'.format(self.mapfile, self.scenfile, self.pathsfile))
+        self.has_paths = True
 
     def make_map(self, event=None):
         f = open(self.mapfile, "w")
@@ -260,7 +314,6 @@ class Grid:
             count+=1
             # bucket
             f.write(str(key)+'\t')
-            print("writing out", key)
             # .map file name
             f.write(str(self.mapfile) + '\t')
             # dimensions of the grid
@@ -270,13 +323,14 @@ class Grid:
             # ending position
             x, y = self.get_empty_spot()
             self.end_bots[key] = [y, x]
-            print("recieved", x, y)
             f.write(str(x) + '\t' + str(y) + '\t')
             # optimal distance
             f.write("\n")
             # f.write(f'{self.get_optimal_length((i, j), (x, y))}\n')
         f.close()
-        print("should be done")
+        self.has_paths = False
+        print(".scen file generated")
+
 
     def get_empty_spot(self):
         x = int(self.x_dim / self.cell_size)
@@ -292,7 +346,6 @@ class Grid:
                 if coord[1] == try_x and coord[0] == try_y:
                     continue
             break
-        print("choosing", try_x, try_y, "because its value is", self.grid[try_y][try_x])
         #print(try_x, try_y)
         self.endspots.append([try_y, try_x])
         return try_x, try_y

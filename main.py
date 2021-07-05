@@ -8,7 +8,7 @@ import sys
 from Grid import Grid
 import time
 
-CELL_SIZE = .66
+CELL_SIZE = .5
 
 # Create listener
 listener = Listener(ListenerType.Local)
