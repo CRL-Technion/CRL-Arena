@@ -328,8 +328,7 @@ class Grid:
             self.end_bots[key] = [y, x]
             f.write(str(x) + '\t' + str(y) + '\t')
             # optimal distance
-            f.write("\n")
-            # f.write(f'{self.get_optimal_length((i, j), (x, y))}\n')
+            f.write(f'{self.get_optimal_length((value[1], value[0]), (y, x))}\n')
         f.close()
         self.has_paths = False
         print(".scen file generated")
