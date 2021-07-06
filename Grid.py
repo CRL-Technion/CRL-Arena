@@ -285,7 +285,7 @@ class Grid:
 
     def run_planner(self, plan=True, event=None):
         #make plan parameter false if you only want to export the paths file (and don't want to convert to plan)
-        os.system('wsl ~/CBSH2-RTC/cbs -m {0} -a {1} -o test.csv --outputPaths={2} -k 2 -t 60'.format(self.mapfile, self.scenfile, self.pathsfile))
+        os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.mapfile} -a {self.scenfile} -o test.csv --outputPaths={self.pathsfile} -k {len(self.bots)} -t 60')
         self.has_paths = True
         paths_to_plan(paths=self.pathsfile)
 
