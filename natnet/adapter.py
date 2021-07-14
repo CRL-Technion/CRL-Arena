@@ -119,6 +119,7 @@ class Adapter(object):
         shift, rigid_bodies = self._protocol.unpack_rigid_bodies(data[offset:])
         offset += shift
 
+
         # Skeletons (Version 2.1 and later)
         shift, skeletons = self._protocol.unpack_skeletons(data[offset:])
         offset += shift
@@ -163,6 +164,7 @@ class Adapter(object):
 
         # Send marker sets
         self._listener.on_marker_sets(marker_sets, time_info)
+
 
     # Unpack a data description packet
     def _unpack_description(self, data):

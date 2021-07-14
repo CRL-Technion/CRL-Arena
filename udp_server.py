@@ -61,7 +61,7 @@ class MyThread(threading.Thread):
             # self.server.UDPServerSocket.sendto(bytesToSend, address)
 
     def send_data(self, data, address):
-        print(f"Sending data to {address}")
+        # print(f"Sending data to {address}")
         bytesToSend = str.encode(data or "")
         self.server.UDPServerSocket.sendto(bytesToSend, address)
 

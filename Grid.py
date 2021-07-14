@@ -138,6 +138,7 @@ class Grid:
 
         cells = list(map(lambda p: self.xy_to_cell(p), ar))
         return cells
+    
 
     def restrict_arena(self):
         # goal: place artificial obstacles around the perimeter of our desired arena
@@ -248,12 +249,9 @@ class Grid:
                 self.end_boxes.append(newtxt)
         axplan = plt.axes([0.46, -0.01, 0.1, 0.075])
         axinit = plt.axes([0.58, -0.01, 0.1, 0.075])
-        axprev = plt.axes([0.7, -0.01, 0.1, 0.075])
-        axnext = plt.axes([0.81, -0.01, 0.1, 0.075])
-        bnext = Button(axnext, 'Map')
-        bnext.on_clicked(self.make_map)
-        bprev = Button(axprev, 'Scenario')
-        bprev.on_clicked(self.make_scen)
+        axscen = plt.axes([0.7, -0.01, 0.1, 0.075])
+        bscen = Button(axscen, 'Scenario')
+        bscen.on_clicked(self.make_scen)
         binit = Button(axinit, 'Load')
         binit.on_clicked(self.init_from_scene)
         bplan = Button(axplan, 'Plan')
@@ -289,7 +287,7 @@ class Grid:
         self.has_paths = True
         paths_to_plan(paths=self.pathsfile)
 
-    def make_map(self, event=None):
+    def make_map(self):
         f = open(self.mapfile, "w")
         f.write("type octile\n")
         f.write("height " + str(self.rows) + '\n')
@@ -305,6 +303,9 @@ class Grid:
         f.close()
 
     def make_scen(self, event=None):
+        #make map file
+        self.make_map()
+        print(".map file generated")
         #first, warn the user that the scene file is incomplete if there are robots that aren't in cells
         if len(self.bad_bots) > 0:
             print("Robots with the following ID's are not aligned with a single cell and won't be included in the .SCEN file: ", self.bad_bots)

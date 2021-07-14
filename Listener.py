@@ -60,6 +60,7 @@ class Listener(MotionListener):
     def on_marker_sets(self, marker_sets, time_info):
         self.marker_sets = marker_sets
 
+
 if __name__ == '__main__':
     # Create listener
     listener = Listener()

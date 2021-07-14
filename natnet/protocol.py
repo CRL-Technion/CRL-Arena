@@ -77,6 +77,14 @@ class Rotation(object):
     def __repr__(self):
         return 'Rotation(w={}, x={}, y={}, z={})'.format(self.w, self.x, self.y, self.z)
 
+    def to_dict(self):
+        return {"w": self.w,
+                "x": self.x,
+                "y": self.y,
+                "z": self.z}
+
+
+
 
 class LabeledMarker(object):
     """
