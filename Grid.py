@@ -48,6 +48,7 @@ class Grid:
         self.cMap = mpl.colors.ListedColormap([(1,1,1), (0,0,0), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)])
         self.heatmap = None
         self.anns = []
+        self.cid = None
 
         # variables related to exporting map and scene files and path file
         self.mapfile = map_filename
@@ -138,7 +139,7 @@ class Grid:
 
         cells = list(map(lambda p: self.xy_to_cell(p), ar))
         return cells
-    
+
 
     def restrict_arena(self):
         # goal: place artificial obstacles around the perimeter of our desired arena
@@ -184,6 +185,31 @@ class Grid:
             if int(data[0]) in self.bots:
                 self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
 
+    def init_from_file(self, event=None, file_name = 'end_spots.txt'):
+        #takes an existing .txt file and initializes end spots from it
+        txt_file = open(file_name, 'r')
+        for line in txt_file:
+            data = line.split('   ') #system doesn't recognize tab characters for some reason
+            if int(data[0]) in self.bots:
+                self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
+
+
+    def on_click(self, event=None):
+        global ix, iy
+        print("got here")
+        ix, iy = event.xdata, event.ydata
+        print("poo", ix, iy)
+        self.fig.canvas.mpl_disconnect(self.cid)
+
+    def choose_from_click(self, event=None):
+        #find number of robots
+        #clear the self.endspots
+        for key, value in self.bots.items():
+            print("Choose end spot for ", key)
+            self.cid = self.fig.canvas.mpl_connect("button_press_event", self.on_click)
+            print(ix, iy)
+
+
     def plot_render(self):
 
         if len(self.out_of_bounds_bots) > 0:
@@ -195,8 +221,6 @@ class Grid:
         data = self.grid
         # color origin cell
         # data[self.origin_cell[0]][self.origin_cell[1]] = CellVal.ORIGIN.value
-
-
 
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
@@ -247,15 +271,21 @@ class Grid:
             if new:
                 newtxt = self.ax.text(value[1] + 0.5, value[0] + 0.5, str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1, .8, 0.8)))
                 self.end_boxes.append(newtxt)
+        # axchoose = plt.axes([0.3, -0.01, 0.1, 0.075])
         axplan = plt.axes([0.46, -0.01, 0.1, 0.075])
         axinit = plt.axes([0.58, -0.01, 0.1, 0.075])
         axscen = plt.axes([0.7, -0.01, 0.1, 0.075])
+        axfile = plt.axes([0.35, -0.01, 0.1, 0.075])
         bscen = Button(axscen, 'Scenario')
         bscen.on_clicked(self.make_scen)
         binit = Button(axinit, 'Load')
         binit.on_clicked(self.init_from_scene)
         bplan = Button(axplan, 'Plan')
         bplan.on_clicked(self.run_planner)
+        bfile = Button(axfile, 'File')
+        bfile.on_clicked(self.init_from_file)
+        # bchoose = Button(axchoose, 'Choose')
+        # bchoose.on_clicked(self.choose_from_click)
 
         self.ax.draw_artist(self.ax.patch)
         self.ax.draw_artist(self.heatmap)

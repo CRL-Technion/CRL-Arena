@@ -140,6 +140,9 @@ class RigidBody(object):
     def __repr__(self):
         return 'RigidBody(body_id={}, position={}, rotation={})'.format(self.body_id, self.position, self.rotation)
 
+    def to_dict(self):
+        return {"body_id": self.body_id, 'position': self.position.to_dict(), 'rotation': self.rotation.to_dict()}
+
 
 class Skeleton(object):
     """
