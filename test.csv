@@ -74,3 +74,4 @@ runtime,#high-level expanded,#high-level generated,#low-level expanded,#low-leve
 2.3e-05,0,1,15,54,13,13,13,13,0,0,0,0,0,0,0,0,0,0,0,1e-06,0,0,0,0,0,0,0,0,5.8e-05,WDG+GR+GC+T+BP with AStar,my_scene.scen:
 2.3e-05,0,1,14,38,12,12,12,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6.3e-05,WDG+GR+GC+T+BP with AStar,my_scene.scen:
 3e-05,0,1,27,95,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,1e-06,0,0,0,0,0,0,0,0,0.000116,WDG+GR+GC+T+BP with AStar,my_scene.scen:
+1.6e-05,0,1,8,26,7,7,7,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.000152,WDG+GR+GC+T+BP with AStar,my_scene.scen:

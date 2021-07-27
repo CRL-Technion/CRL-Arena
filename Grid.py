@@ -26,6 +26,13 @@ class CellVal(Enum):
     OBSTACLE_REAL = 4
     OBSTACLE_ART = 5 #artificial obstacle
 
+class Corner(Enum):
+    TOPLEFT = 1
+    TOPRIGHT = 2
+    BOTTOMLEFT = 3
+    BOTTOMRIGHT = 4
+
+
 
 class Grid:
     # A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file
@@ -33,11 +40,14 @@ class Grid:
         # arena dimensions (within greater 12x12 scope)
         self.x_dim = min(x_dim, 12)  # m
         self.y_dim = min(y_dim, 12)  # m
+        self.corners = {}
+
         self.cell_size = cell_size  # m
         self.rows = int(12 / cell_size)  # TODO shouldn't this be x_dim instead of 12?
         self.cols = int(12 / cell_size)  # TODO shouldn't this be y_dim instead of 12?
         self.origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
-
+        self.x_range = [self.origin_cell[0] - self.x_dim // 2, self.origin_cell[0] + self.x_dim // 2]
+        self.y_range = [self.origin_cell[1] - self.y_dim // 2, self.origin_cell[1] + self.y_dim // 2]
         # the grid itself with values
         self.grid = []
         self.reset_grid()
@@ -102,7 +112,7 @@ class Grid:
             for cell in relevant_cells:
                 x = int(self.x_dim / self.cell_size)
                 y = int(self.y_dim / self.cell_size)
-                if (cell[0] > (self.origin_cell[0] + y // 2) or cell[0] < (self.origin_cell[0] - y // 2)) or cell[1] > (self.origin_cell[1] + x // 2 or cell[1]) < (self.origin_cell[1] - x // 2):
+                if (cell[0] > self.y_range[1] or cell[0] < self.y_range[0] or cell[1] > self.x_range[1] < self.x_range[0]):
                     self.out_of_bounds_bots.append(type)
                     in_bounds = False
                     break
@@ -143,19 +153,43 @@ class Grid:
 
     def restrict_arena(self):
         # goal: place artificial obstacles around the perimeter of our desired arena
-        x = int(self.x_dim / self.cell_size)
-        y = int(self.y_dim / self.cell_size)
-        # corners
-        top_right = [(self.origin_cell[0] - y // 2), self.origin_cell[1] + x // 2]
-        bottom_right = [(self.origin_cell[0] + y // 2), self.origin_cell[1] + x // 2]
-        top_left = [(self.origin_cell[0] - y // 2), self.origin_cell[1] - x // 2]
-        bottom_left = [(self.origin_cell[0] + y // 2), self.origin_cell[1] - x // 2]
-        corners = [top_left, top_right, bottom_right, bottom_left]
-        borders = corners
-        for i in range(top_left[1], top_right[1]): # top border
-            borders.append([top_right[0], i])
-        for i in range(bottom_left[1], bottom_right[1]): # bottom border
-            borders.append([bottom_right[0], i])
+        #if we have our corner markers in the scene, use those; otherwise, use the built-in parameters
+        if len(self.corners) == 4:
+            #draw from corner markers
+            #at this point, the corners coordinates are in cartesian
+            #when we find the mins and maxes of x and y, we are going to pull x from the [0] index, maintaining it as cartesian
+            x_min = max(self.corners[Corner.TOPLEFT.value][0], self.corners[Corner.BOTTOMLEFT.value][0]) #"highest" on our graph. will pull from top right and top left
+            x_max = min(self.corners[Corner.TOPRIGHT.value][0], self.corners[Corner.BOTTOMRIGHT.value][0])
+            y_min = max(self.corners[Corner.TOPRIGHT.value][1], self.corners[Corner.TOPLEFT.value][1])
+            y_max = max(self.corners[Corner.BOTTOMRIGHT.value][1], self.corners[Corner.BOTTOMLEFT.value][1])
+            self.x_range = [x_min, x_max]
+            self.y_range = [y_min, y_max]
+
+            top_right = [y_min, x_max]
+            top_left = [y_min, x_min]
+            bottom_right = [y_max, x_max]
+            bottom_left = [y_max, x_min]
+        else:
+            #create artificial based on given parameters
+            x = int(self.x_dim / self.cell_size)
+            y = int(self.y_dim / self.cell_size)
+            # corners
+            top_left = [(self.origin_cell[0] - y // 2), self.origin_cell[1] + x // 2] #NOT cartesian
+            bottom_left = [(self.origin_cell[0] + y // 2), self.origin_cell[1] + x // 2]
+            top_right = [(self.origin_cell[0] - y // 2), self.origin_cell[1] - x // 2]
+            bottom_right = [(self.origin_cell[0] + y // 2), self.origin_cell[1] - x // 2]
+        corners_to_use = [top_left, top_right, bottom_right, bottom_left]
+        borders = corners_to_use
+        if len(self.corners)==4:
+            for i in range(top_left[1], top_right[1]):  # top border
+                borders.append([top_right[0], i])
+            for i in range(bottom_left[1], bottom_right[1]):  # bottom border
+                borders.append([bottom_right[0], i])
+        else:
+            for i in range(top_left[1], top_right[1], -1): # top border
+                borders.append([top_right[0], i])
+            for i in range(bottom_left[1], bottom_right[1], -1): # bottom border
+                borders.append([bottom_right[0], i])
         for i in range(top_left[0], bottom_left[0]): # left border
             borders.append([i, bottom_left[1]])
         for i in range(top_right[0], bottom_right[0]): # right border
@@ -163,6 +197,20 @@ class Grid:
         # indicate all relevant cells in the grid
         for cell in borders:
             self.grid[cell[0]][cell[1]] = CellVal.OBSTACLE_ART.value
+
+    def xy_to_cell(self, loc):
+        # convert x and y from Motive to new coordinate system
+        x = -loc[0]
+        y = -loc[1]
+        return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
+
+    def process_corners(self, corners):
+        #loop through each corner
+        for corner in corners:
+            x, y = corner['position']['x'], corner['position']['y']
+            x, y = self.xy_to_cell([x, y])
+            self.corners[corner['body_id'] % 300] = [y, x] #here we swap the x's and y's. switching them to cartesian (visual)
+        # take the minimum of the tops, the maximum of the bottoms, the minimum of the rights, and the maximum of the
 
     def plot_init_heatmap(self):
         # initialize heatmap to be used to display the plot; should be called before plot_render()
@@ -193,7 +241,6 @@ class Grid:
             if int(data[0]) in self.bots:
                 self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
 
-
     def on_click(self, event=None):
         global ix, iy
         print("got here")
@@ -219,13 +266,12 @@ class Grid:
         # re-plot grid with up-to-date values; should be called after updating/adding values
         self.restrict_arena()
         data = self.grid
-        # color origin cell
-        # data[self.origin_cell[0]][self.origin_cell[1]] = CellVal.ORIGIN.value
 
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         self.heatmap = self.ax.pcolormesh(data, edgecolors='k', linewidths=1, cmap=self.cMap, vmin=0, vmax=5)
 
+        #paths
         if self.has_paths:
             for ann in self.anns:
                 ann.remove()
@@ -271,7 +317,6 @@ class Grid:
             if new:
                 newtxt = self.ax.text(value[1] + 0.5, value[0] + 0.5, str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1, .8, 0.8)))
                 self.end_boxes.append(newtxt)
-        # axchoose = plt.axes([0.3, -0.01, 0.1, 0.075])
         axplan = plt.axes([0.46, -0.01, 0.1, 0.075])
         axinit = plt.axes([0.58, -0.01, 0.1, 0.075])
         axscen = plt.axes([0.7, -0.01, 0.1, 0.075])
@@ -284,32 +329,18 @@ class Grid:
         bplan.on_clicked(self.run_planner)
         bfile = Button(axfile, 'File')
         bfile.on_clicked(self.init_from_file)
-        # bchoose = Button(axchoose, 'Choose')
-        # bchoose.on_clicked(self.choose_from_click)
 
         self.ax.draw_artist(self.ax.patch)
         self.ax.draw_artist(self.heatmap)
         self.fig.canvas.blit(self.ax.bbox)
         self.fig.canvas.flush_events()
-        #for each robot, check if there's already a text box. if there is, change it. if there isn't, add one
-        # for text in self.textboxes:
-        #     # print("new text that says", text.get_s())
-        #     text.set_visible(False)
-        #     print(plt.getp(text, 'text'))
-        # # for key, value in self.end_bots.items():
-        #     # plt.text(-6.53 + .65*(value[0]+1), 11.05 - 0.86*(value[1]-1), str(key), size=13 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1., 0.8, 0.8), ))
-        #     newtxt = plt.text(-6.53 + .65*(value[1]), 11.05 - 0.86*(value[0]), str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1., 0.8, 0.8)))
-        #     self.textboxes.append(newtxt)
+
 
 
         # t_end = time.time()
         plt.pause(0.2)
 
-    def xy_to_cell(self, loc):
-        # convert x and y from Motive to new coordinate system
-        x = -loc[0]
-        y = -loc[1]
-        return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
+
 
     def run_planner(self, plan=True, event=None):
         #make plan parameter false if you only want to export the paths file (and don't want to convert to plan)

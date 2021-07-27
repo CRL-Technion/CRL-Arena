@@ -34,25 +34,23 @@ server.start()
 while True:
     bodies = listener.bodies
     marker_sets = listener.marker_sets
-    # all_bods = [body.to_dict() for body in bodies]
     to_send = []
+    corners = []
 
     for body in bodies:
-        # print(body.body_id)
         if int(body.body_id) // 100 == 1:
             to_send.append(body.to_dict())
-    print(to_send)
+        elif int(body.body_id) // 100 == 3:
+            corners.append(body.to_dict())
+    grid.process_corners(corners)
     server.update_data(json.dumps(to_send))
     grid.reset_grid()
     for ms in marker_sets:
         name = ms.name
-        if name == "all":
+        if name == "all" or 'corner' in name.lower():
             continue
         body_type = -1 if "obst" in name.lower() else int(name[name.index('-')+1::])
         markers = ms.positions
-        # get list of all cells it touches
-        # for obstacles, paint all cells it touches
-        # for robots, paint the cells with majority points, and if they're all the same paint it green
         set_coords = []
         for mi, marker_pos in enumerate(markers):
             loc = [marker_pos.x, marker_pos.y]
