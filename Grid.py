@@ -8,6 +8,7 @@ import astar
 import os
 
 from matplotlib.widgets import Button
+from matplotlib.widgets import TextBox
 
 from natnet.protocol import RigidBody, LabeledMarker, Position, Rotation
 import random
@@ -241,20 +242,10 @@ class Grid:
             if int(data[0]) in self.bots:
                 self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
 
-    def on_click(self, event=None):
-        global ix, iy
-        print("got here")
-        ix, iy = event.xdata, event.ydata
-        print("poo", ix, iy)
-        self.fig.canvas.mpl_disconnect(self.cid)
 
-    def choose_from_click(self, event=None):
-        #find number of robots
-        #clear the self.endspots
-        for key, value in self.bots.items():
-            print("Choose end spot for ", key)
-            self.cid = self.fig.canvas.mpl_connect("button_press_event", self.on_click)
-            print(ix, iy)
+
+    def submit(self, text):
+        print("received ", text)
 
 
     def plot_render(self):
@@ -317,6 +308,11 @@ class Grid:
             if new:
                 newtxt = self.ax.text(value[1] + 0.5, value[0] + 0.5, str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1, .8, 0.8)))
                 self.end_boxes.append(newtxt)
+        # plt.figure(2)
+        # initial_text = 'peepee'
+        # axtext = plt.axes([0.1, 0.05, 0.8, 0.075])
+        # text_box = TextBox(axtext, 'Evaluate', initial=initial_text)
+        # text_box.on_submit(self.submit)
         axplan = plt.axes([0.46, -0.01, 0.1, 0.075])
         axinit = plt.axes([0.58, -0.01, 0.1, 0.075])
         axscen = plt.axes([0.7, -0.01, 0.1, 0.075])
@@ -329,6 +325,7 @@ class Grid:
         bplan.on_clicked(self.run_planner)
         bfile = Button(axfile, 'File')
         bfile.on_clicked(self.init_from_file)
+
 
         self.ax.draw_artist(self.ax.patch)
         self.ax.draw_artist(self.heatmap)
@@ -364,6 +361,7 @@ class Grid:
         f.close()
 
     def make_scen(self, event=None):
+
         #make map file
         self.make_map()
         print(".map file generated")
@@ -390,6 +388,8 @@ class Grid:
             self.end_bots[key] = [y, x]
             f.write(str(x) + '\t' + str(y) + '\t')
             # optimal distance
+            print(value[1])
+            print(value[0])
             f.write(f'{self.get_optimal_length((value[1], value[0]), (y, x))}\n')
         f.close()
         self.has_paths = False
@@ -402,8 +402,8 @@ class Grid:
         try_x = -1
         try_y = -1
         while True: #choose within borders of arena, not the 12x12
-            try_x = random.randint((self.origin_cell[1] - x // 2)+1, self.origin_cell[1] + x // 2)
-            try_y = random.randint((self.origin_cell[0] - y // 2)+1, (self.origin_cell[0] + y // 2))
+            try_x = random.randint(self.x_range[0], self.x_range[1])
+            try_y = random.randint(self.y_range[0], self.y_range[1])
             if self.grid[try_y][try_x] != 0:
                 continue
             for coord in self.endspots: # now need to make sure no two ending spots align
