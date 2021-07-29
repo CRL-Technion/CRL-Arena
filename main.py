@@ -4,11 +4,37 @@ from Listener import Listener, ListenerType
 from udp_server import UDPServer
 import json
 import sys
+import numpy
 
 from Grid import Grid
 import time
 
-CELL_SIZE = .5
+CELL_SIZE = .3
+
+def euler_from_quaternion(quat):
+    """
+    Convert quaternion (w in last place) to euler roll, pitch, yaw.
+
+    quat = [x, y, z, w]
+    """
+    x = quat.x
+    y = quat.y
+    z = quat.z
+    w = quat.w
+
+    sinr_cosp = 2 * (w * x + y * z)
+    cosr_cosp = 1 - 2 * (x * x + y * y)
+    roll = numpy.arctan2(sinr_cosp, cosr_cosp)
+
+    sinp = 2 * (w * y - z * x)
+    pitch = numpy.arcsin(sinp)
+
+    siny_cosp = 2 * (w * z + x * y)
+    cosy_cosp = 1 - 2 * (y * y + z * z)
+    yaw = numpy.arctan2(siny_cosp, cosy_cosp)
+
+    return pitch, yaw, roll
+    return roll, pitch, yaw
 
 # Create listener
 listener = Listener(ListenerType.Local)
@@ -40,14 +66,16 @@ while True:
     for body in bodies:
         if int(body.body_id) // 100 == 1:
             to_send.append(body.to_dict())
-        elif int(body.body_id) // 100 == 3:
-            corners.append(body.to_dict())
-    grid.process_corners(corners)
+        # elif int(body.body_id) // 100 == 3: #was being used when we used pivot points as corner coordinates
+        #     corners.append(body.to_dict())
     server.update_data(json.dumps(to_send))
     grid.reset_grid()
     for ms in marker_sets:
         name = ms.name
-        if name == "all" or 'corner' in name.lower():
+        if name == "all":
+            continue
+        elif 'corner' in name.lower():
+            corners.append(ms.to_dict())
             continue
         body_type = -1 if "obst" in name.lower() else int(name[name.index('-')+1::])
         markers = ms.positions
@@ -57,6 +85,7 @@ while True:
             set_coords.append(loc)
             # print("location marker #{mi}: ", loc)
         grid.add_body(body_type, set_coords, tolerance=0)
+    grid.process_corners(corners)
     time.sleep(1)
 
     grid.plot_render()

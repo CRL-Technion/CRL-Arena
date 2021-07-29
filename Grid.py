@@ -113,7 +113,7 @@ class Grid:
             for cell in relevant_cells:
                 x = int(self.x_dim / self.cell_size)
                 y = int(self.y_dim / self.cell_size)
-                if (cell[0] > self.y_range[1] or cell[0] < self.y_range[0] or cell[1] > self.x_range[1] < self.x_range[0]):
+                if (cell[0] >= self.y_range[1] or cell[0] <= self.y_range[0] or cell[1] >= self.x_range[1] < self.x_range[0]):
                     self.out_of_bounds_bots.append(type)
                     in_bounds = False
                     break
@@ -205,12 +205,50 @@ class Grid:
         y = -loc[1]
         return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
 
-    def process_corners(self, corners):
-        #loop through each corner
+    def process_corners(self, corners, dist = 0.15):
+        #dist is in cm
         for corner in corners:
-            x, y = corner['position']['x'], corner['position']['y']
-            x, y = self.xy_to_cell([x, y])
-            self.corners[corner['body_id'] % 300] = [y, x] #here we swap the x's and y's. switching them to cartesian (visual)
+            name = corner['name']
+            grid_positions = []
+            if name[name.index('-')+1::] == 'TL':
+                for position in corner['positions']:
+                    position['x'] = position['x'] - dist
+                    position['y'] = position['y'] - dist
+                    x, y = self.xy_to_cell([position['x'], position['y']])
+                    grid_positions.append([x, y])
+                x = max(position[0] for position in grid_positions)
+                y = max(position[1] for position in grid_positions)
+                id = 1
+            elif name[name.index('-')+1::] == 'BR':
+                for position in corner['positions']:
+                    position['x'] = position['x'] + dist
+                    position['y'] = position['y'] + dist
+                    x, y = self.xy_to_cell([position['x'], position['y']])
+                    grid_positions.append([x, y])
+                x = min(position[0] for position in grid_positions)
+                y = min(position[1] for position in grid_positions)
+                id = 4
+            elif name[name.index('-')+1::] == 'TR':
+                for position in corner['positions']:
+                    position['x'] = position['x'] - dist
+                    position['y'] = position['y'] + dist
+                    x, y = self.xy_to_cell([position['x'], position['y']])
+                    grid_positions.append([x, y])
+                x = min(position[0] for position in grid_positions)
+                y = max(position[1] for position in grid_positions)
+                id = 2
+            elif name[name.index('-')+1::] == 'BL':
+                for position in corner['positions']:
+                    # print("A", position)
+                    position['x'] = position['x'] + dist
+                    position['y'] = position['y'] - dist
+                    # print("B", position)
+                    x, y = self.xy_to_cell([position['x'], position['y']])
+                    grid_positions.append([x, y])
+                x = max(position[0] for position in grid_positions)
+                y = min(position[1] for position in grid_positions)
+                id = 3
+            self.corners[id] = [y, x] #here we swap the x's and y's. switching them to cartesian (visual)
         # take the minimum of the tops, the maximum of the bottoms, the minimum of the rights, and the maximum of the
 
     def plot_init_heatmap(self):
@@ -235,12 +273,17 @@ class Grid:
                 self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
 
     def init_from_file(self, event=None, file_name = 'end_spots.txt'):
-        #takes an existing .txt file and initializes end spots from it
+        #takes an existing .txt file and initializes END spots from it
         txt_file = open(file_name, 'r')
         for line in txt_file:
             data = line.split('   ') #system doesn't recognize tab characters for some reason
             if int(data[0]) in self.bots:
+                if (self.grid[int(data[2])][int(data[1])] != 0):
+                    continue
+                if (int(data[2]) >= self.x_range[1] or int(data[2]) <= self.x_range[0] or int(data[1]) >= self.y_range[1] or int(data[1]) <= self.y_range[0]):
+                    continue
                 self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
+        txt_file.close()
 
 
 
@@ -336,7 +379,7 @@ class Grid:
 
         # t_end = time.time()
         plt.pause(0.2)
-
+        self.out_of_bounds_bots = []
 
 
     def run_planner(self, plan=True, event=None):
