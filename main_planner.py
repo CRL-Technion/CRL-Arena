@@ -85,6 +85,6 @@ while True:
             # print("location marker #{mi}: ", loc)
         grid.add_body(body_type, set_coords, tolerance=0)
     grid.process_corners(corners)
-    time.sleep(0.5)
+    time.sleep(1)
 
     grid.plot_render()

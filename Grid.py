@@ -289,8 +289,8 @@ class Grid:
                     continue
                 if (int(data[2]) >= self.x_range[1] or int(data[2]) <= self.x_range[0] or int(data[1]) >= self.y_range[1] or int(data[1]) <= self.y_range[0]): #if the cell is out of bounds
                     continue
+                print("coordinates for robot ", data[0], "will be ", int(data[2]), int(data[1]))
                 self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
-                #here, also generate a map and scenario file
         if len(self.end_bots) > 0:
             self.make_scen(from_scratch=False)
             print("scene made")
@@ -423,7 +423,10 @@ class Grid:
         f = open(self.scenfile, "w")
         f.write("version 1\n")
         count = 0
-        self.end_bots = {}
+        # self.end_bots = {} #this resets every time this is the problem
+        for key, value in self.end_bots.items():
+            if key not in self.bots:
+                self.end_bots.pop(key)
         print("here")
         for key, value in self.bots.items():
             count+=1
