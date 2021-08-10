@@ -44,11 +44,12 @@ class Grid:
         self.corners = {}
 
         self.cell_size = cell_size  # m
-        self.rows = int(12 / cell_size)  # TODO shouldn't this be x_dim instead of 12?
-        self.cols = int(12 / cell_size)  # TODO shouldn't this be y_dim instead of 12?
+        #rows and columns are like the larger grid, while x and y dim are the smaller arena
+        self.rows = int(12 / cell_size)
+        self.cols = int(12 / cell_size)
         self.origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
-        self.x_range = [self.origin_cell[0] - self.x_dim // 2, self.origin_cell[0] + self.x_dim // 2]
-        self.y_range = [self.origin_cell[1] - self.y_dim // 2, self.origin_cell[1] + self.y_dim // 2]
+        self.x_range = [self.origin_cell[0] - self.x_dim / self.cell_size // 2, self.origin_cell[0] + self.x_dim / self.cell_size // 2]
+        self.y_range = [self.origin_cell[1] - self.y_dim / self.cell_size // 2, self.origin_cell[1] + self.y_dim / self.cell_size // 2]
         # the grid itself with values
         self.grid = []
         self.reset_grid()
@@ -113,7 +114,10 @@ class Grid:
             for cell in relevant_cells:
                 x = int(self.x_dim / self.cell_size)
                 y = int(self.y_dim / self.cell_size)
-                if (cell[0] >= self.y_range[1] or cell[0] <= self.y_range[0] or cell[1] >= self.x_range[1] < self.x_range[0]):
+                if (cell[0] >= self.y_range[1] or cell[0] <= self.y_range[0] or cell[1] >= self.x_range[1] or cell[1] <= self.x_range[0]):
+                    print("y: ", cell[0], "x: ", cell[1])
+                    print("x range: ", self.x_range)
+                    print("y range: ", self.y_range)
                     self.out_of_bounds_bots.append(type)
                     in_bounds = False
                     break
@@ -273,22 +277,28 @@ class Grid:
                 self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
 
     def init_from_file(self, event=None, file_name = 'end_spots.txt'):
+        print("from file called")
         #takes an existing .txt file and initializes END spots from it
         txt_file = open(file_name, 'r')
         for line in txt_file:
             data = line.split('   ') #system doesn't recognize tab characters for some reason
+            print("data: ", data)
             if int(data[0]) in self.bots:
-                if (self.grid[int(data[2])][int(data[1])] != 0):
+                print('recognized robot', data[0])
+                if (self.grid[int(data[2])][int(data[1])] != 0): #if the spot isn't available
                     continue
-                if (int(data[2]) >= self.x_range[1] or int(data[2]) <= self.x_range[0] or int(data[1]) >= self.y_range[1] or int(data[1]) <= self.y_range[0]):
+                if (int(data[2]) >= self.x_range[1] or int(data[2]) <= self.x_range[0] or int(data[1]) >= self.y_range[1] or int(data[1]) <= self.y_range[0]): #if the cell is out of bounds
                     continue
                 self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
+                #here, also generate a map and scenario file
+        if len(self.end_bots) > 0:
+            self.make_scen(from_scratch=False)
+            print("scene made")
+        else:
+            print("ERROR: Scenario file could not be generated because end locations were not found or out of bounds.")
         txt_file.close()
 
 
-
-    def submit(self, text):
-        print("received ", text)
 
 
     def plot_render(self):
@@ -382,8 +392,7 @@ class Grid:
         self.out_of_bounds_bots = []
 
 
-    def run_planner(self, plan=True, event=None):
-        #make plan parameter false if you only want to export the paths file (and don't want to convert to plan)
+    def run_planner(self, event=None):
         os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.mapfile} -a {self.scenfile} -o test.csv --outputPaths={self.pathsfile} -k {len(self.bots)} -t 60')
         self.has_paths = True
         paths_to_plan(paths=self.pathsfile)
@@ -403,8 +412,7 @@ class Grid:
             f.write('\n')
         f.close()
 
-    def make_scen(self, event=None):
-
+    def make_scen(self, from_scratch=True, event=None):
         #make map file
         self.make_map()
         print(".map file generated")
@@ -416,6 +424,7 @@ class Grid:
         f.write("version 1\n")
         count = 0
         self.end_bots = {}
+        print("here")
         for key, value in self.bots.items():
             count+=1
             # bucket
@@ -427,8 +436,14 @@ class Grid:
             # starting position
             f.write(str(value[1]) + '\t' + str(value[0]) + '\t')
             # ending position
-            x, y = self.get_empty_spot()
-            self.end_bots[key] = [y, x]
+            print(self.end_bots)
+            if (from_scratch == False) and key in self.end_bots: #if there is already a prepared end location in the dictionary waiting for use
+                print("will pull from end bots for: ", key)
+                x, y = self.end_bots[key][1], self.end_bots[key][0]
+            else:
+                x, y = self.get_empty_spot()
+                self.end_bots[key] = [y, x]
+                self.end_bots[key] = [y, x]
             f.write(str(x) + '\t' + str(y) + '\t')
             # optimal distance
             print(value[1])
