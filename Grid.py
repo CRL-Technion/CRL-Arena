@@ -386,7 +386,6 @@ class Grid:
         self.fig.canvas.flush_events()
 
 
-
         # t_end = time.time()
         plt.pause(0.2)
         self.out_of_bounds_bots = []
@@ -395,7 +394,9 @@ class Grid:
     def run_planner(self, event=None):
         os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.mapfile} -a {self.scenfile} -o test.csv --outputPaths={self.pathsfile} -k {len(self.bots)} -t 60')
         self.has_paths = True
-        paths_to_plan(paths=self.pathsfile)
+        plan_file_name = paths_to_plan(paths=self.pathsfile)
+        host_name_dir = "crl-user@crl-mocap2:/home/crl-user"
+        os.system(f'pscp -pw qawsedrf {plan_file_name} {host_name_dir}')
 
     def make_map(self):
         f = open(self.mapfile, "w")

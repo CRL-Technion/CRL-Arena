@@ -3,6 +3,7 @@ PLAN_FILE = 'plan.txt'
 
 
 def paths_to_plan(paths=PATHS_FILE, plan=PLAN_FILE):
+    #converts the output of the CBS planner to the input of Hadar's ROS code and saves it in a file by the name of PLAN_FILE
     paths_file = open(paths, "r")
     plan_file = open(plan, "w")
 
@@ -36,5 +37,6 @@ def paths_to_plan(paths=PATHS_FILE, plan=PLAN_FILE):
                     y = str(-(int(y)-int(start_location[1])))
                 plan_file.write('\t\t- x: ' + x + '\n\t\t y: ' + y + '\n\t\t t: ' + str(counter) + '\n' )
                 counter = counter +1
+        return PLAN_FILE
 
 
