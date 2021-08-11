@@ -37,7 +37,7 @@ class Corner(Enum):
 
 class Grid:
     # A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file
-    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='my_map.map', scen_filename:str= 'my_scene.scen', paths_filename:str = 'paths.txt', plan_filename:str='plan.txt', ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user"
+    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='data/map.map', scen_filename:str= 'data/scenario.scen', end_locations_filename:str = 'data/end_locations.txt', paths_filename:str = 'data/paths.txt', plan_filename:str='data/plan.txt', ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user"
 ):
         # arena dimensions (within greater 12x12 scope)
         self.x_dim = min(x_dim, 12)  # m
@@ -68,9 +68,11 @@ class Grid:
         self.scenfile = scen_filename
         self.pathsfile = paths_filename
         self.planfile = plan_filename
+        self.end_locations_file = end_locations_filename
         self.endspots = []
         self.has_paths = False
         self.ubuntu_host_dir = ubuntu_dir
+
 
 
         #association of robots with their ID
@@ -279,10 +281,9 @@ class Grid:
             if int(data[0]) in self.bots:
                 self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
 
-    def init_from_file(self, event=None, file_name = 'end_spots.txt'):
-        print("from file called")
+    def init_from_file(self, event=None):
         #takes an existing .txt file and initializes END spots from it
-        txt_file = open(file_name, 'r')
+        txt_file = open(self.end_locations_file, 'r')
         for line in txt_file:
             data = line.split('   ') #system doesn't recognize tab characters for some reason
             print("data: ", data)
@@ -394,9 +395,6 @@ class Grid:
     def run_planner(self, event=None):
         os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.mapfile} -a {self.scenfile} -o test.csv --outputPaths={self.pathsfile} -k {len(self.bots)} -t 60')
         self.has_paths = True
-        # path_file = open(self.pathsfile, 'r')
-        # for line in path_file:
-        #     print("line :", line)
         paths_to_plan(paths=self.pathsfile, plan=self.planfile)
         os.system(f'pscp -pw qawsedrf {self.planfile} {self.ubuntu_host_dir}')
 

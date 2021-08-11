@@ -1,5 +1,5 @@
-PATHS_FILE = 'paths.txt'
-PLAN_FILE = 'plan.txt'
+PATHS_FILE = 'data/paths.txt'
+PLAN_FILE = 'data/plan.txt'
 
 
 def paths_to_plan(paths=PATHS_FILE, plan=PLAN_FILE):
@@ -13,7 +13,6 @@ def paths_to_plan(paths=PATHS_FILE, plan=PLAN_FILE):
     all_robots_starts_at_zero_zero = True
 
     for line in paths_file:
-        print("poo", line)
         #get and write agent number
         space_idx = line.index(" ")
         colon_idx = line.index(":")
