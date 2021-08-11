@@ -5,12 +5,15 @@ PLAN_FILE = 'plan.txt'
 def paths_to_plan(paths=PATHS_FILE, plan=PLAN_FILE):
     #converts the output of the CBS planner to the input of Hadar's ROS code and saves it in a file by the name of PLAN_FILE
     paths_file = open(paths, "r")
+    # for line in paths_file:
+    #     print(line)
     plan_file = open(plan, "w")
 
     plan_file.write("schedule:\n")
     all_robots_starts_at_zero_zero = True
 
     for line in paths_file:
+        print("poo", line)
         #get and write agent number
         space_idx = line.index(" ")
         colon_idx = line.index(":")
@@ -37,6 +40,7 @@ def paths_to_plan(paths=PATHS_FILE, plan=PLAN_FILE):
                     y = str(-(int(y)-int(start_location[1])))
                 plan_file.write('\t\t- x: ' + x + '\n\t\t y: ' + y + '\n\t\t t: ' + str(counter) + '\n' )
                 counter = counter +1
-        return PLAN_FILE
+    plan_file.close()
+    return PLAN_FILE
 
 

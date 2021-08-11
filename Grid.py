@@ -37,7 +37,8 @@ class Corner(Enum):
 
 class Grid:
     # A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file
-    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='my_map.map', scen_filename:str= 'my_scene.scen', paths_filename:str = 'paths.txt', from_scen = False):
+    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='my_map.map', scen_filename:str= 'my_scene.scen', paths_filename:str = 'paths.txt', plan_filename:str='plan.txt', ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user"
+):
         # arena dimensions (within greater 12x12 scope)
         self.x_dim = min(x_dim, 12)  # m
         self.y_dim = min(y_dim, 12)  # m
@@ -66,8 +67,10 @@ class Grid:
         self.mapfile = map_filename
         self.scenfile = scen_filename
         self.pathsfile = paths_filename
+        self.planfile = plan_filename
         self.endspots = []
         self.has_paths = False
+        self.ubuntu_host_dir = ubuntu_dir
 
 
         #association of robots with their ID
@@ -298,9 +301,6 @@ class Grid:
             print("ERROR: Scenario file could not be generated because end locations were not found or out of bounds.")
         txt_file.close()
 
-
-
-
     def plot_render(self):
 
         if len(self.out_of_bounds_bots) > 0:
@@ -394,9 +394,11 @@ class Grid:
     def run_planner(self, event=None):
         os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.mapfile} -a {self.scenfile} -o test.csv --outputPaths={self.pathsfile} -k {len(self.bots)} -t 60')
         self.has_paths = True
-        plan_file_name = paths_to_plan(paths=self.pathsfile)
-        host_name_dir = "crl-user@crl-mocap2:/home/crl-user"
-        os.system(f'pscp -pw qawsedrf {plan_file_name} {host_name_dir}')
+        # path_file = open(self.pathsfile, 'r')
+        # for line in path_file:
+        #     print("line :", line)
+        paths_to_plan(paths=self.pathsfile, plan=self.planfile)
+        os.system(f'pscp -pw qawsedrf {self.planfile} {self.ubuntu_host_dir}')
 
     def make_map(self):
         f = open(self.mapfile, "w")

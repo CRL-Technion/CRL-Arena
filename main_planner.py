@@ -9,7 +9,7 @@ import math
 from Grid import Grid
 import time
 
-CELL_SIZE = 1
+CELL_SIZE = 0.5
 
 def euler_from_quaternion(quat):
     """
