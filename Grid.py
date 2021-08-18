@@ -37,7 +37,7 @@ class Corner(Enum):
 
 class Grid:
     # A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file
-    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='data/map.map', scen_filename:str= 'data/scenario.scen', end_locations_filename:str = 'data/end_locations.txt', paths_filename:str = 'data/paths.txt', plan_filename:str='data/plan.txt', ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user"
+    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='data/map.map', scen_filename:str= 'data/scenario.scen', end_locations_filename:str = 'data/end_locations.txt', paths_filename:str = 'data/paths.txt', plan_filename:str='data/plan.txt', ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"
 ):
         # arena dimensions (within greater 12x12 scope)
         self.x_dim = min(x_dim, 12)  # m
@@ -121,8 +121,6 @@ class Grid:
                 y = int(self.y_dim / self.cell_size)
                 if (cell[0] >= self.y_range[1] or cell[0] <= self.y_range[0] or cell[1] >= self.x_range[1] or cell[1] <= self.x_range[0]):
                     print("y: ", cell[0], "x: ", cell[1])
-                    print("x range: ", self.x_range)
-                    print("y range: ", self.y_range)
                     self.out_of_bounds_bots.append(type)
                     in_bounds = False
                     break
@@ -172,8 +170,10 @@ class Grid:
             x_max = min(self.corners[Corner.TOPRIGHT.value][0], self.corners[Corner.BOTTOMRIGHT.value][0])
             y_min = max(self.corners[Corner.TOPRIGHT.value][1], self.corners[Corner.TOPLEFT.value][1])
             y_max = max(self.corners[Corner.BOTTOMRIGHT.value][1], self.corners[Corner.BOTTOMLEFT.value][1])
-            self.x_range = [x_min, x_max]
-            self.y_range = [y_min, y_max]
+            self.x_range = [int(x_min), int(x_max)]
+            self.y_range = [int(y_min), int(y_max)]
+            # self.x_range = [x_min, x_max]
+            # self.y_range = [y_min, y_max]
 
             top_right = [y_min, x_max]
             top_left = [y_min, x_min]
@@ -290,8 +290,10 @@ class Grid:
             if int(data[0]) in self.bots:
                 print('recognized robot', data[0])
                 if (self.grid[int(data[2])][int(data[1])] != 0): #if the spot isn't available
+                    print("not available")
                     continue
-                if (int(data[2]) >= self.x_range[1] or int(data[2]) <= self.x_range[0] or int(data[1]) >= self.y_range[1] or int(data[1]) <= self.y_range[0]): #if the cell is out of bounds
+                if (int(data[1]) >= self.x_range[1] or int(data[1]) <= self.x_range[0] or int(data[2]) >= self.y_range[1] or int(data[2]) <= self.y_range[0]): #if the cell is out of bounds
+                    print("space requested is out of bounds")
                     continue
                 print("coordinates for robot ", data[0], "will be ", int(data[2]), int(data[1]))
                 self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
@@ -428,8 +430,9 @@ class Grid:
         for key, value in self.end_bots.items():
             if key not in self.bots:
                 self.end_bots.pop(key)
-        print("here")
-        for key, value in self.bots.items():
+        items = sorted(self.bots.items())
+        print(items)
+        for key, value in items:
             count+=1
             # bucket
             f.write(str(key)+'\t')
@@ -440,19 +443,22 @@ class Grid:
             # starting position
             f.write(str(value[1]) + '\t' + str(value[0]) + '\t')
             # ending position
-            print(self.end_bots)
             if (from_scratch == False) and key in self.end_bots: #if there is already a prepared end location in the dictionary waiting for use
                 print("will pull from end bots for: ", key)
                 x, y = self.end_bots[key][1], self.end_bots[key][0]
             else:
+                print("Generating Random Spot for robot ", key)
                 x, y = self.get_empty_spot()
                 self.end_bots[key] = [y, x]
                 self.end_bots[key] = [y, x]
             f.write(str(x) + '\t' + str(y) + '\t')
             # optimal distance
-            print(value[1])
-            print(value[0])
+            print("value: ", value)
+            print("x_range: ", self.x_range)
+            print("y_range: ", self.y_range)
+            print("y x", y, " ", x)
             f.write(f'{self.get_optimal_length((value[1], value[0]), (y, x))}\n')
+
         f.close()
         self.has_paths = False
         print(".scen file generated")
@@ -477,10 +483,7 @@ class Grid:
         return try_x, try_y
 
     def get_optimal_length(self, loc1, loc2):
-        path = list(astar.find_path(loc1, loc2,
-                                    neighbors_fnct=lambda loc: self.neighbors(loc, True),
-                                    heuristic_cost_estimate_fnct=self.heuristic,
-                                    distance_between_fnct=self.distance))
+        path = list(astar.find_path(loc1, loc2, neighbors_fnct=lambda loc: self.neighbors(loc, True), heuristic_cost_estimate_fnct=self.heuristic, distance_between_fnct=self.distance))
 
         dist = 0
         prev = path[0]
