@@ -125,6 +125,7 @@ class Grid:
                     in_bounds = False
                     break
             if in_bounds:
+                #robot is in bounds; we color it depending on whether it is fully inside a cell or not
                 mode_cell = mode(relevant_cells)
                 majority_count = len(relevant_cells) / 2
                 if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):#all cells are in one
@@ -136,7 +137,7 @@ class Grid:
                 elif tolerance == 2 and relevant_cells.count(mode_cell) >= majority_count:#majority cells are in the same cell
                     self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
                     self.bots[type] = [mode_cell[0], mode_cell[1]]
-                else:
+                else: #if it does not qualify as being in one cell
                     self.bad_bots.append(type) #add its id to the list of bad robots
                     # highlight all the cells it touches
                     for cell in relevant_cells:
@@ -364,11 +365,7 @@ class Grid:
             if new:
                 newtxt = self.ax.text(value[1] + 0.5, value[0] + 0.5, str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1, .8, 0.8)))
                 self.end_boxes.append(newtxt)
-        # plt.figure(2)
-        # initial_text = 'peepee'
-        # axtext = plt.axes([0.1, 0.05, 0.8, 0.075])
-        # text_box = TextBox(axtext, 'Evaluate', initial=initial_text)
-        # text_box.on_submit(self.submit)
+
         axplan = plt.axes([0.46, -0.01, 0.1, 0.075])
         axinit = plt.axes([0.58, -0.01, 0.1, 0.075])
         axscen = plt.axes([0.7, -0.01, 0.1, 0.075])
@@ -457,7 +454,10 @@ class Grid:
             print("x_range: ", self.x_range)
             print("y_range: ", self.y_range)
             print("y x", y, " ", x)
+            # f.write(f'{self.get_optimal_length((value[1], value[0]), (0, 0))}\n')
             f.write(f'{self.get_optimal_length((value[1], value[0]), (y, x))}\n')
+
+
 
         f.close()
         self.has_paths = False
@@ -483,7 +483,8 @@ class Grid:
         return try_x, try_y
 
     def get_optimal_length(self, loc1, loc2):
-        path = list(astar.find_path(loc1, loc2, neighbors_fnct=lambda loc: self.neighbors(loc, True), heuristic_cost_estimate_fnct=self.heuristic, distance_between_fnct=self.distance))
+        # path = list(astar.find_path(loc1, loc2, neighbors_fnct=lambda loc: self.neighbors(loc, True), heuristic_cost_estimate_fnct=self.heuristic, distance_between_fnct=self.distance))
+        path = list(astar.find_path((4,7), (6, 8), neighbors_fnct=lambda loc: self.neighbors(loc, True), heuristic_cost_estimate_fnct=self.heuristic, distance_between_fnct=self.distance))
 
         dist = 0
         prev = path[0]

@@ -106,3 +106,9 @@ runtime,#high-level expanded,#high-level generated,#low-level expanded,#low-leve
 1.1e-05,0,1,4,10,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,1e-06,0,0,0,0,0,0,0,0,6.1e-05,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
 2.1e-05,0,1,4,10,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6e-05,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
 1.9e-05,0,1,13,46,11,11,11,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.000146,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
+1.4e-05,0,1,4,15,3,3,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6.9e-05,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
+1.6e-05,0,1,4,15,3,3,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.1e-05,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
+1.2e-05,0,1,4,16,3,3,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6.9e-05,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
+1.2e-05,0,1,4,16,3,3,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.000147,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
+1.6e-05,0,1,8,29,6,6,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6.6e-05,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
+1.7e-05,0,1,8,29,6,6,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7.4e-05,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
