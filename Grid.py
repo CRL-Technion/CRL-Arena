@@ -8,9 +8,7 @@ import astar
 import os
 
 from matplotlib.widgets import Button
-from matplotlib.widgets import TextBox
 
-from natnet.protocol import RigidBody, LabeledMarker, Position, Rotation
 import random
 
 import itertools
@@ -20,6 +18,7 @@ from enum import Enum
 from paths_to_plan_func import paths_to_plan
 
 class CellVal(Enum):
+    #represents the values that populate the grid (and match with the colors that appear on the grid)
     EMPTY = 0
     ORIGIN = 1
     ROBOT_FULL = 2 #entire robot is on one cell
@@ -29,17 +28,29 @@ class CellVal(Enum):
     COLLISION = 6 #a robot and a real obstacle occupy the same cell
 
 class Corner(Enum):
+    #values associated with corner markers
     TOPLEFT = 1
     TOPRIGHT = 2
     BOTTOMLEFT = 3
     BOTTOMRIGHT = 4
 
-
-
+#this class is the visual representation of the arena, including robots, obstacles, and borders.
 class Grid:
     # A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file
     def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='data/map.map', scen_filename:str= 'data/scenario.scen', end_locations_filename:str = 'data/end_locations.txt', paths_filename:str = 'data/paths.txt', plan_filename:str='data/plan.txt', ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"
 ):
+        '''
+        x_dim: in meters, size of overall arena; maximum 12
+        y_dim: in meters, size of overall arena; maximum 12
+        cell_size: in meters
+        map_filename: name of .map file that is output
+        scen_filename: name of .scen file that is output
+        end_locations_filename: name of .txt file containing each robot's end location
+        paths_filename: name of .txt file where planner will output paths
+        plan_filename: name of .txt file to be sent to ubuntu
+        ubuntu_dir: name of directory in the ubuntu computer to send plan
+        '''
+
         # arena dimensions (within greater 12x12 scope)
         self.x_dim = min(x_dim, 12)  # m
         self.y_dim = min(y_dim, 12)  # m
@@ -50,6 +61,7 @@ class Grid:
         self.rows = int(12 / cell_size)
         self.cols = int(12 / cell_size)
         self.origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
+        #x and y ranges defined below are default values (will be replaced if corner markers present)
         self.x_range = [self.origin_cell[0] - self.x_dim / self.cell_size // 2, self.origin_cell[0] + self.x_dim / self.cell_size // 2]
         self.y_range = [self.origin_cell[1] - self.y_dim / self.cell_size // 2, self.origin_cell[1] + self.y_dim / self.cell_size // 2]
         # the grid itself with values
@@ -85,32 +97,32 @@ class Grid:
         self.bot_boxes = [] #all the text boxes representing robots
         self.end_boxes = [] #all the text boxes representing the robots' end locations
 
-
+    # reset the grid so that all values are 0 (meaning nothing is in the box)
     def reset_grid(self):
-        # reset the grid so that all values are 0 (meaning nothing is in the box)
         self.grid = []
         for i in range(int(self.rows)):
             self.grid.append([CellVal.EMPTY.value for i in range(int(self.cols))])
         self.bots = {}
         self.bad_bots = []
 
-    def getBlockedCells(self, vertices_list, dr=0.01): #TODO: make it so that this only uses the outer vertices??? waste of time if there's a body with a lot of inner markers
+    #get all of the cells that an obstacle touches
+    def __get_blocked_cells(self, vertices_list, dr=0.01):
         blocked_cells = []
         for pair in itertools.product(vertices_list, repeat=2):
-            line_blocked_cells = self.lineGridIntersection(pair[0], pair[1], dr)
+            line_blocked_cells = self.__line_grid_intersection(pair[0], pair[1], dr)
             # blocked_cells.append(line_blocked_cells)
             blocked_cells += line_blocked_cells
         return list(set(blocked_cells))
 
     def add_body(self, type, body_coords, tolerance=1):
-        #a word on tolerance: it describes how "strict" the system will be with requiring a robot to be in one cell in order to count it as a robot
-        #   tolerance of 0: zero tolerance, all of a robot's markers must be in one cell
-        #   tolerance of 1: all markers but one should be in the same cell
-        #   tolerance of 2: higher flexibility, just goes with the majority\
+        #a word on tolerance: it describes how "strict" the system will be in order to recognize a robot
+        #   tolerance of 0: all markers must be in one cell
+        #   tolerance of 1: all markers but one must be in the same cell
+        #   tolerance of 2: majority of markers must be in one cell
         #if the robot's configuration is outside of the specified tolerance, it will highlight all the cells the robot touches
         # if type is obstacle, then color all the cells it touches
         if type == -1: #obstacle
-            blocked_cells = self.getBlockedCells(body_coords)
+            blocked_cells = self.__get_blocked_cells(body_coords)
             for coord in blocked_cells:
                self.grid[coord[0]][coord[1]] = CellVal.OBSTACLE_REAL.value
         # if type is robot, then if it's mostly concentrated on one cell color it, if it's spread out color all of them
@@ -146,7 +158,8 @@ class Grid:
                     for cell in relevant_cells:
                         self.grid[cell[0]][cell[1]] = CellVal.ROBOT_PARTIAL.value
 
-    def lineGridIntersection(self, p1, p2, dr):
+    #related to __get_blocked_cells
+    def __line_grid_intersection(self, p1, p2, dr):
         ls = LineString([p1, p2])
         points_on_line = []
         line_length = np.ceil(ls.length)
@@ -171,21 +184,17 @@ class Grid:
         #check if there is an obstacle on any of their coordinates
         #if there is, change the cell's value to some other color
 
+    #places artificial obstacles around the desired arena
     def restrict_arena(self):
-        # goal: place artificial obstacles around the perimeter of our desired arena
         #if we have our corner markers in the scene, use those; otherwise, use the built-in parameters
         if len(self.corners) == 4:
-            #draw from corner markers
-            #at this point, the corners coordinates are in cartesian
-            #when we find the mins and maxes of x and y, we are going to pull x from the [0] index, maintaining it as cartesian
-            x_min = max(self.corners[Corner.TOPLEFT.value][0], self.corners[Corner.BOTTOMLEFT.value][0]) #"highest" on our graph. will pull from top right and top left
+            x_min = max(self.corners[Corner.TOPLEFT.value][0], self.corners[Corner.BOTTOMLEFT.value][0])
             x_max = min(self.corners[Corner.TOPRIGHT.value][0], self.corners[Corner.BOTTOMRIGHT.value][0])
             y_min = max(self.corners[Corner.TOPRIGHT.value][1], self.corners[Corner.TOPLEFT.value][1])
             y_max = max(self.corners[Corner.BOTTOMRIGHT.value][1], self.corners[Corner.BOTTOMLEFT.value][1])
+
             self.x_range = [int(x_min), int(x_max)]
             self.y_range = [int(y_min), int(y_max)]
-            # self.x_range = [x_min, x_max]
-            # self.y_range = [y_min, y_max]
 
             top_right = [y_min, x_max]
             top_left = [y_min, x_min]
@@ -220,8 +229,8 @@ class Grid:
         for cell in borders:
             self.grid[cell[0]][cell[1]] = CellVal.OBSTACLE_ART.value
 
+    # convert x and y from Motive to new coordinate system
     def xy_to_cell(self, loc):
-        # convert x and y from Motive to new coordinate system
         x = -loc[0]
         y = -loc[1]
         return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
@@ -260,20 +269,17 @@ class Grid:
                 id = 2
             elif name[name.index('-')+1::] == 'BL':
                 for position in corner['positions']:
-                    # print("A", position)
                     position['x'] = position['x'] + dist
                     position['y'] = position['y'] - dist
-                    # print("B", position)
                     x, y = self.xy_to_cell([position['x'], position['y']])
                     grid_positions.append([x, y])
                 x = max(position[0] for position in grid_positions)
                 y = min(position[1] for position in grid_positions)
                 id = 3
             self.corners[id] = [y, x] #here we swap the x's and y's. switching them to cartesian (visual)
-        # take the minimum of the tops, the maximum of the bottoms, the minimum of the rights, and the maximum of the
 
+    # initialize heatmap to be used to display the plot; should be called before plot_render()
     def plot_init_heatmap(self):
-        # initialize heatmap to be used to display the plot; should be called before plot_render()
         self.fig, self.ax = plt.subplots(1, 1)
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
@@ -283,8 +289,8 @@ class Grid:
         plt.gca().invert_yaxis()
         self.fig.show()
 
+    # takes an existing .scen file and loads end spots from it
     def init_from_scene(self, event=None):
-        #takes an existing .scen file and initializes end spots from it
         scen_file = open(self.scenfile, 'r')
         for line in scen_file:
             if line[0] == 'v':
@@ -293,11 +299,11 @@ class Grid:
             if int(data[0]) in self.bots:
                 self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
 
+    # takes an existing .txt file and initializes END spots from it (user's choice), also creates a new .scen file
     def init_from_file(self, event=None):
-        #takes an existing .txt file and initializes END spots from it
         txt_file = open(self.end_locations_file, 'r')
         for line in txt_file:
-            data = line.split('   ') #system doesn't recognize tab characters for some reason
+            data = line.split('   ') #python doesn't recognize tab characters for some reason
             print("data: ", data)
             if int(data[0]) in self.bots:
                 print('recognized robot', data[0])
@@ -408,7 +414,7 @@ class Grid:
         paths_to_plan(paths=self.pathsfile, plan=self.planfile)
         os.system(f'pscp -pw qawsedrf {self.planfile} {self.ubuntu_host_dir}')
 
-    def make_map(self):
+    def __make_map(self):
         f = open(self.mapfile, "w")
         f.write("type octile\n")
         f.write("height " + str(self.rows) + '\n')
@@ -424,8 +430,7 @@ class Grid:
         f.close()
 
     def make_scen(self, from_scratch=True, event=None):
-        #make map file
-        self.make_map()
+        self.__make_map()
         print(".map file generated")
         #first, warn the user that the scene file is incomplete if there are robots that aren't in cells
         if len(self.bad_bots) > 0:
@@ -467,19 +472,12 @@ class Grid:
             print("y x", y, " ", x)
             # f.write(f'{self.get_optimal_length((value[1], value[0]), (0, 0))}\n')
             f.write(f'{self.get_optimal_length((value[1], value[0]), (y, x))}\n')
-
-
-
         f.close()
         self.has_paths = False
         print(".scen file generated")
 
 
     def get_empty_spot(self):
-        x = int(self.x_dim / self.cell_size)
-        y = int(self.y_dim / self.cell_size)
-        try_x = -1
-        try_y = -1
         while True: #choose within borders of arena, not the 12x12
             try_x = random.randint(self.x_range[0], self.x_range[1])
             try_y = random.randint(self.y_range[0], self.y_range[1])
@@ -489,14 +487,13 @@ class Grid:
                 if coord[1] == try_x and coord[0] == try_y:
                     continue
             break
-        #print(try_x, try_y)
         self.endspots.append([try_y, try_x])
         return try_x, try_y
 
     def get_optimal_length(self, loc1, loc2):
         # path = list(astar.find_path(loc1, loc2, neighbors_fnct=lambda loc: self.neighbors(loc, True), heuristic_cost_estimate_fnct=self.heuristic, distance_between_fnct=self.distance))
+        #should be the line above, but sometimes causes issues; line below is a band-aid solution only!
         path = list(astar.find_path((4,7), (6, 8), neighbors_fnct=lambda loc: self.neighbors(loc, True), heuristic_cost_estimate_fnct=self.heuristic, distance_between_fnct=self.distance))
-
         dist = 0
         prev = path[0]
         for p in path[1:]:
