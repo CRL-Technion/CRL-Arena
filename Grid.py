@@ -361,7 +361,6 @@ class Grid:
                         paths_clean.append(clean)
                 for i in range(len(paths_clean) - 1):
                     ann = self.ax.annotate("", xy = (int(paths_clean[i][1]) + 0.5,int(paths_clean[i][0]) + 0.5), xytext=(int(paths_clean[i+1][1]) + 0.5,int(paths_clean[i+1][0])+0.5), arrowprops=dict(arrowstyle='-', connectionstyle='arc3'))
-                    # print("annotating from", (int(paths_clean[i][1]) + 0.5,int(paths_clean[i][0]) + 0.5), "to ", (int(paths_clean[i+1][1]) + 0.5,int(paths_clean[i+1][0])+0.5) )
                     self.anns.append(ann)
 
         for key, value in self.bots.items():
@@ -383,19 +382,22 @@ class Grid:
                 newtxt = self.ax.text(value[1] + 0.5, value[0] + 0.5, str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1, .8, 0.8)))
                 self.end_boxes.append(newtxt)
 
-        axplan = plt.axes([0.46, -0.01, 0.1, 0.075])
-        axinit = plt.axes([0.58, -0.01, 0.1, 0.075])
-        axscen = plt.axes([0.7, -0.01, 0.1, 0.075])
-        axfile = plt.axes([0.35, -0.01, 0.1, 0.075])
-        bscen = Button(axscen, 'Scenario')
-        bscen.on_clicked(self.make_scen)
-        binit = Button(axinit, 'Load')
-        binit.on_clicked(self.init_from_scene)
-        bplan = Button(axplan, 'Plan')
-        bplan.on_clicked(self.run_planner)
-        bfile = Button(axfile, 'File')
-        bfile.on_clicked(self.init_from_file)
-
+        ax_planner = plt.axes([0.46, -0.01, 0.1, 0.075])
+        ax_from_scen = plt.axes([0.58, -0.01, 0.1, 0.075])
+        ax_make_scen = plt.axes([0.7, -0.01, 0.1, 0.075])
+        ax_end_locs = plt.axes([0.35, -0.01, 0.1, 0.075])
+        button_scenario = Button(ax_make_scen, 'Make .SCEN')
+        button_scenario.label.set_fontsize(5)
+        button_scenario.on_clicked(self.make_scen)
+        button_from_scen = Button(ax_from_scen, 'Load from .SCEN')
+        button_from_scen.on_clicked(self.init_from_scene)
+        button_from_scen.label.set_fontsize(5)
+        button_planner = Button(ax_planner, 'Run Planner')
+        button_planner.on_clicked(self.run_planner)
+        button_planner.label.set_fontsize(6)
+        button_end_locs = Button(ax_end_locs, 'Choose End Locs')
+        button_end_locs.on_clicked(self.init_from_file)
+        button_end_locs.label.set_fontsize(5)
 
         self.ax.draw_artist(self.ax.patch)
         self.ax.draw_artist(self.heatmap)
