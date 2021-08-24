@@ -18,22 +18,17 @@ class UDPServer:
         self.UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.UDPServerSocket.bind((self.localIP, self.localPort))
         self._queue = Queue()
-        self.data_test = []
         self._data_thread = MyThread(self._queue, self)
-        # self._data_thread = MyThread(self.data_test, self)
         self._data_thread.start()
         print("UDP server up and listening")
 
     def update_data(self, data):
         print("update: ", data)
-        # self._queue.put(data)
         if self._queue.empty():
             self._queue.put(data)
         else:
             self._queue.get()
             self._queue.put(data)
-        # self.data_test = data
-
 
 print_lock = threading.Lock()
 
@@ -50,18 +45,12 @@ class MyThread(threading.Thread):
         # Listen for incoming datagrams
         while True:
             data = self.queue.get()
-
-
             bytesAddressPair = self.server.UDPServerSocket.recvfrom(self.server.bufferSize)
             message = bytesAddressPair[0]
             address = bytesAddressPair[1]
 
             clientMsg = "Message from Client:{}".format(message)
             clientIP = "Client IP Address:{}".format(address)
-
-            # print(clientMsg)
-            # print(clientIP)
-            print("data check", data)
             self.send_data(data, address)
 
             # Sending a reply to client
@@ -70,9 +59,8 @@ class MyThread(threading.Thread):
             # self.server.UDPServerSocket.sendto(bytesToSend, address)
 
     def send_data(self, data, address):
-        print("sending data")
-        print(type(data))
-        # print(f"Sending data to {address}")
+        print(self.queue.qsize())
+        print("data at time of sending: ", data)
         bytesToSend = str.encode(data or "")
         self.server.UDPServerSocket.sendto(bytesToSend, address)
 

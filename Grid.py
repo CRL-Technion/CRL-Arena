@@ -26,6 +26,7 @@ class CellVal(Enum):
     ROBOT_PARTIAL = 3 #robot is spread out over multiple cells
     OBSTACLE_REAL = 4
     OBSTACLE_ART = 5 #artificial obstacle
+    COLLISION = 6 #a robot and a real obstacle occupy the same cell
 
 class Corner(Enum):
     TOPLEFT = 1
@@ -59,6 +60,7 @@ class Grid:
         self.fig = None
         self.ax = None
         self.cMap = mpl.colors.ListedColormap([(1,1,1), (0,0,0), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)])
+        #, (1, 0.4, 0.57)
         self.heatmap = None
         self.anns = []
         self.cid = None
@@ -126,16 +128,17 @@ class Grid:
                     break
             if in_bounds:
                 #robot is in bounds; we color it depending on whether it is fully inside a cell or not
+                #also need to check for collisions
                 mode_cell = mode(relevant_cells)
                 majority_count = len(relevant_cells) / 2
                 if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):#all cells are in one
-                    self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
                     self.bots[type] = [mode_cell[0], mode_cell[1]]
                 elif tolerance == 1 and relevant_cells.count(mode_cell) >= len(relevant_cells) - 1:#all cells but one are in the same cell
-                    self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
                     self.bots[type] = [mode_cell[0], mode_cell[1]]
                 elif tolerance == 2 and relevant_cells.count(mode_cell) >= majority_count:#majority cells are in the same cell
-                    self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
                     self.bots[type] = [mode_cell[0], mode_cell[1]]
                 else: #if it does not qualify as being in one cell
                     self.bad_bots.append(type) #add its id to the list of bad robots
@@ -159,6 +162,14 @@ class Grid:
         cells = list(map(lambda p: self.xy_to_cell(p), ar))
         return cells
 
+    def process_collisions(self):
+        #if there are any robots that are overlapping with obstacles, color them a certain color
+        #go through list of self bots and check their coordinates
+        for key, value in self.bots.items():
+            if self.grid[value[0]][value[1]] == CellVal.OBSTACLE_REAL:
+                self.grid[value[0]][value[1]] = CellVal.COLLISION
+        #check if there is an obstacle on any of their coordinates
+        #if there is, change the cell's value to some other color
 
     def restrict_arena(self):
         # goal: place artificial obstacles around the perimeter of our desired arena

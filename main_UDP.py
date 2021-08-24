@@ -63,7 +63,6 @@ while True:
     marker_sets = listener.marker_sets
     to_send = []
     corners = []
-
     for body in bodies:
         if int(body.body_id) // 100 == 1: #if the body is a robot, we want to send its information via UDP
             # print("original quaternoin rotation: ", body.rotation)
