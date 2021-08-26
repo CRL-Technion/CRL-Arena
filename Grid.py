@@ -20,12 +20,11 @@ from paths_to_plan_func import paths_to_plan
 class CellVal(Enum):
     #represents the values that populate the grid (and match with the colors that appear on the grid)
     EMPTY = 0
-    ORIGIN = 1
+    COLLISION = 1 #a robot and a real obstacle occupy the same cell
     ROBOT_FULL = 2 #entire robot is on one cell
     ROBOT_PARTIAL = 3 #robot is spread out over multiple cells
     OBSTACLE_REAL = 4
     OBSTACLE_ART = 5 #artificial obstacle
-    COLLISION = 6 #a robot and a real obstacle occupy the same cell
 
 class Corner(Enum):
     #values associated with corner markers
@@ -71,7 +70,7 @@ class Grid:
         # variables related to matplotlib visualization
         self.fig = None
         self.ax = None
-        self.cMap = mpl.colors.ListedColormap([(1,1,1), (0,0,0), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)])
+        self.cMap = mpl.colors.ListedColormap([(1,1,1), (1, 0.4, 0.57), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)]) #white  green red black gray
         #, (1, 0.4, 0.57)
         self.heatmap = None
         self.anns = []
@@ -145,12 +144,17 @@ class Grid:
                 majority_count = len(relevant_cells) / 2
                 if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):#all cells are in one
                     if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
                     self.bots[type] = [mode_cell[0], mode_cell[1]]
                 elif tolerance == 1 and relevant_cells.count(mode_cell) >= len(relevant_cells) - 1:#all cells but one are in the same cell
                     if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
+
                     self.bots[type] = [mode_cell[0], mode_cell[1]]
                 elif tolerance == 2 and relevant_cells.count(mode_cell) >= majority_count:#majority cells are in the same cell
                     if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
+
                     self.bots[type] = [mode_cell[0], mode_cell[1]]
                 else: #if it does not qualify as being in one cell
                     self.bad_bots.append(type) #add its id to the list of bad robots
@@ -180,6 +184,7 @@ class Grid:
         #go through list of self bots and check their coordinates
         for key, value in self.bots.items():
             if self.grid[value[0]][value[1]] == CellVal.OBSTACLE_REAL:
+                print('found collision at ', value)
                 self.grid[value[0]][value[1]] = CellVal.COLLISION
         #check if there is an obstacle on any of their coordinates
         #if there is, change the cell's value to some other color
@@ -332,9 +337,13 @@ class Grid:
         self.restrict_arena()
         data = self.grid
 
+        #related to color map
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         self.heatmap = self.ax.pcolormesh(data, edgecolors='k', linewidths=1, cmap=self.cMap, vmin=0, vmax=5)
+
+        #collision processing
+        self.process_collisions()
 
         #paths
         if self.has_paths:
