@@ -420,7 +420,9 @@ class Grid:
 
 
     def run_planner(self, event=None):
+        print("planner called")
         os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.mapfile} -a {self.scenfile} -o test.csv --outputPaths={self.pathsfile} -k {len(self.bots)} -t 60')
+        print("planner finished")
         self.has_paths = True
         paths_to_plan(paths=self.pathsfile, plan=self.planfile)
         os.system(f'pscp -pw qawsedrf {self.planfile} {self.ubuntu_host_dir}')
