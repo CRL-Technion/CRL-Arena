@@ -9,7 +9,7 @@ import math
 from Grid import Grid
 import time
 
-CELL_SIZE = 0.5
+CELL_SIZE = 0.3
 
 def euler_from_quaternion(quat):
     """
@@ -50,9 +50,9 @@ listener = Listener(ListenerType.Local)
 if len(sys.argv) == 2:
     grid = Grid(cell_size = float(sys.argv[1]))
 elif CELL_SIZE == None:
-    grid = Grid()
+    grid = Grid(plan_filename='data/algorithm_output')
 else:
-    grid = Grid(cell_size = CELL_SIZE)
+    grid = Grid(cell_size = CELL_SIZE, plan_filename='data/algorithm_output')
 grid.plot_init_heatmap()
 
 # start the listener
