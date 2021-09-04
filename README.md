@@ -7,7 +7,10 @@
 - robot_setup/multi_agent_start_script.py- ssh all the robots in the list of IP addresses.
 
 -----
+## Documentation
+#### motive-robots-bundle/bundle_documentation.docx
 
+----
 ## General
 ### NatNet MotionClient
 A Python NatNat client for motion tracking with [OptiTrack NatNetSDK](https://optitrack.com/software/natnet-sdk/) v3.1.0 (Motive v2.1).
