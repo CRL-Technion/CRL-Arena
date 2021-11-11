@@ -96,6 +96,10 @@ class Grid:
         self.bot_boxes = [] #all the text boxes representing robots
         self.end_boxes = [] #all the text boxes representing the robots' end locations
 
+        # saves path after running the solver
+        # self.solution_paths_raw = {}
+        self.solution_paths_translated = {}
+
     # reset the grid so that all values are 0 (meaning nothing is in the box)
     def reset_grid(self):
         self.grid = []
@@ -240,6 +244,9 @@ class Grid:
         y = -loc[1]
         return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
 
+    # def cell_to_xy(self, cell):
+    #     return -(cell[0] - self.origin_cell[0]) * self.cell_size , -(cell[1] - self.origin_cell[1]) * self.cell_size
+
     def process_corners(self, corners, dist = 0.15):
         #dist is in cm
         for corner in corners:
@@ -289,7 +296,7 @@ class Grid:
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         data = self.grid
-        self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=1, cmap=self.cMap, vmin=0, vmax=5)
+        self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=0.01, cmap=self.cMap, vmin=0, vmax=5)
         self.fig.canvas.draw()
         plt.gca().invert_yaxis()
         self.fig.show()
@@ -340,7 +347,7 @@ class Grid:
         #related to color map
         bounds = range(self.cMap.N)
         norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
-        self.heatmap = self.ax.pcolormesh(data, edgecolors='k', linewidths=1, cmap=self.cMap, vmin=0, vmax=5)
+        self.heatmap = self.ax.pcolormesh(data, edgecolors='k', linewidths=0.01, cmap=self.cMap, vmin=0, vmax=5)
 
         #collision processing
         self.process_collisions()
@@ -355,7 +362,7 @@ class Grid:
             pathsfile = open(self.pathsfile, 'r')
 
             #for each line, parse it and create a list of the coordinates
-            for line in pathsfile:
+            for id, line in enumerate(pathsfile):
                 colon_idx = line.index(":")
                 path_string = line[colon_idx + 2::]
                 paths_list = path_string.split('->')
@@ -371,6 +378,8 @@ class Grid:
                 for i in range(len(paths_clean) - 1):
                     ann = self.ax.annotate("", xy = (int(paths_clean[i][1]) + 0.5,int(paths_clean[i][0]) + 0.5), xytext=(int(paths_clean[i+1][1]) + 0.5,int(paths_clean[i+1][0])+0.5), arrowprops=dict(arrowstyle='-', connectionstyle='arc3'))
                     self.anns.append(ann)
+                # self.solution_paths_raw[id] = []
+                self.solution_paths_translated[id] = paths_clean
 
         for key, value in self.bots.items():
             new = True
@@ -415,7 +424,7 @@ class Grid:
 
 
         # t_end = time.time()
-        plt.pause(0.2)
+        plt.pause(0.5)
         self.out_of_bounds_bots = []
 
 
