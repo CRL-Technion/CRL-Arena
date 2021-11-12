@@ -118,6 +118,78 @@ class Grid:
             blocked_cells += line_blocked_cells
         return list(set(blocked_cells))
 
+    def get_positions_list(self, marker_positions):
+        # markers = ms.positions
+        set_coords = []
+        for mi, marker_pos in enumerate(marker_positions):
+            loc = [marker_pos.x, marker_pos.y]  # TODO: change to tuple
+            set_coords.append(loc)
+        return set_coords
+
+    def add_obstacles(self, obstacles):
+        # color all the cells the obstacles touch
+        print(obstacles)
+        for obst in obstacles:
+            obst_cord = self.get_positions_list(obst.positions)
+            blocked_cells = self.__get_blocked_cells(obst_cord)
+            for coord in blocked_cells:
+                self.grid[coord[0]][coord[1]] = CellVal.OBSTACLE_REAL.value
+
+    def add_robots(self, robots, tolerance=1):
+        """
+            a word on tolerance: it describes how "strict" the system will be in order to recognize a robot
+            tolerance of 0: all markers must be in one cell
+            tolerance of 1: all markers but one must be in the same cell
+            tolerance of 2: majority of markers must be in one cell
+            if the robot's configuration is outside of the specified tolerance, it will highlight all the cells the robot touches
+        """
+        for robot in robots:
+            robot_cords = self.get_positions_list(robot.positions)
+            relevant_cells = [self.xy_to_cell(coord) for coord in robot_cords]
+            # check if the robot is out of bounds
+            in_bounds = True
+            for cell in relevant_cells:
+                x = int(self.x_dim / self.cell_size)
+                y = int(self.y_dim / self.cell_size)
+                if (cell[0] >= self.y_range[1] or cell[0] <= self.y_range[0] or cell[1] >= self.x_range[1] or cell[1] <=
+                        self.x_range[0]):
+                    print("y: ", cell[0], "x: ", cell[1])
+                    self.out_of_bounds_bots.append(type)
+                    in_bounds = False
+                    break
+            if in_bounds:
+                # robot is in bounds; we color it depending on whether it is fully inside a cell or not
+                # also need to check for collisions
+                mode_cell = mode(relevant_cells)
+                majority_count = len(relevant_cells) / 2
+                if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):  # all cells are in one
+                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value:
+                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
+                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
+                    self.bots[type] = [mode_cell[0], mode_cell[1]]
+                elif tolerance == 1 and relevant_cells.count(mode_cell) >= len(
+                        relevant_cells) - 1:  # all cells but one are in the same cell
+                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value:
+                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
+                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
+
+                    self.bots[type] = [mode_cell[0], mode_cell[1]]
+                elif tolerance == 2 and relevant_cells.count(
+                        mode_cell) >= majority_count:  # majority cells are in the same cell
+                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value:
+                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
+                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
+
+                    self.bots[type] = [mode_cell[0], mode_cell[1]]
+                else:  # if it does not qualify as being in one cell
+                    self.bad_bots.append(type)  # add its id to the list of bad robots
+                    # highlight all the cells it touches
+                    for cell in relevant_cells:
+                        self.grid[cell[0]][cell[1]] = CellVal.ROBOT_PARTIAL.value
+
     def add_body(self, type, body_coords, tolerance=1):
         #a word on tolerance: it describes how "strict" the system will be in order to recognize a robot
         #   tolerance of 0: all markers must be in one cell

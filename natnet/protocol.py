@@ -1,5 +1,7 @@
 ﻿import struct
 
+from enum import Enum
+
 # Structs object types
 ShortValue = struct.Struct('<h')
 IntValue = struct.Struct('<i')
@@ -12,6 +14,13 @@ Vector3 = struct.Struct('<fff')
 Quaternion = struct.Struct('<ffff')
 VERSION = 'BBBB'
 
+
+class MarkerSetType(Enum):
+    NoType = 0  # default type for backward compatibility, consider removing if not necessary
+    Corner = 1
+    Obstacle = 2
+    Robot = 3
+    All = 4
 
 class Version(object):
     """
@@ -109,17 +118,20 @@ class MarkerSet(object):
     Attributes:
         name (str): the marker set name
         positions (list[:class:`Position`]): a list of marker positions position
+        type: an enum specifies the marker set type (obstacle, robot, corner, etc.)
     """
-    def __init__(self, name, positions):
+    def __init__(self, name, positions, type=MarkerSetType.NoType):
         self.name = name
         self.positions = positions
+        self.type = type
 
     def __repr__(self):
         return 'MarkerSet(name={}, positions={})'.format(self.name, self.positions)
 
     def to_dict(self):
         return {"name": self.name,
-            "positions": [p.to_dict() for p in self.positions]}
+                "type": self.type,
+                "positions": [p.to_dict() for p in self.positions]}
 
 
 
