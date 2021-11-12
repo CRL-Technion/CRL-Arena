@@ -99,6 +99,7 @@ class Grid:
         # saves path after running the solver
         # self.solution_paths_raw = {}
         self.solution_paths_translated = {}
+        self.SEND_SOLUTION = False
 
     # reset the grid so that all values are 0 (meaning nothing is in the box)
     def reset_grid(self):
@@ -434,7 +435,8 @@ class Grid:
         print("planner finished")
         self.has_paths = True
         paths_to_plan(paths=self.pathsfile, plan=self.planfile)
-        os.system(f'pscp -pw qawsedrf {self.planfile} {self.ubuntu_host_dir}')
+        if self.SEND_SOLUTION:
+            os.system(f'pscp -pw qawsedrf {self.planfile} {self.ubuntu_host_dir}')
 
     def __make_map(self):
         f = open(self.mapfile, "w")

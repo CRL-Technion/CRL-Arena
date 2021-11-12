@@ -9,6 +9,8 @@ import math
 from Grid import Grid
 import time
 
+import mockup
+
 CELL_SIZE = 0.3
 
 def euler_from_quaternion(quat):
@@ -47,6 +49,13 @@ def euler_from_quaternion(quat):
 
 # Create listener
 listener = Listener(ListenerType.Local)
+
+########################################
+# Mockup listener for offline tests
+listener = mockup.simple_listener_mock
+# comment out to run online with Motive listener
+########################################
+
 if len(sys.argv) == 2:
     grid = Grid(cell_size = float(sys.argv[1]))
 elif CELL_SIZE == None:
@@ -58,7 +67,8 @@ grid.plot_init_heatmap()
 # start the listener
 listener.start()
 
-# stop the listener TODO not working...
+# stop the listener
+# TODO: not working...
 # listener.stop()
 
 # the main loop for plotting the environment
