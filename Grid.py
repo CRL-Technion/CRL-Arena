@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from statistics import mode
-import time
 import astar
 import os
 
@@ -101,16 +100,24 @@ class Grid:
         self.solution_paths_translated = {}
         self.SEND_SOLUTION = False
 
-    # reset the grid so that all values are 0 (meaning nothing is in the box)
     def reset_grid(self):
+        """
+        Resets the grid so that all values are 0 (meaning nothing is in the box)
+        """
         self.grid = []
         for i in range(int(self.rows)):
             self.grid.append([CellVal.EMPTY.value for i in range(int(self.cols))])
         self.bots = {}
         self.bad_bots = []
 
-    #get all of the cells that an obstacle touches
     def __get_blocked_cells(self, vertices_list, dr=0.01):
+        """
+        Returns a list of grid cells that are blocked by an obstacle.
+        traverses in small steps through each line between any two corners of the obstacle
+        (according to the markers positions) and marks each grid cell it steps within as blocked.
+        Notice that it might miss blocked cells if the step size is to large, but if the cells are not very small it
+        supposed to be accurate enough.
+        """
         blocked_cells = []
         for pair in itertools.product(vertices_list, repeat=2):
             line_blocked_cells = self.__line_grid_intersection(pair[0], pair[1], dr)
@@ -119,7 +126,9 @@ class Grid:
         return list(set(blocked_cells))
 
     def get_positions_list(self, marker_positions):
-        # markers = ms.positions
+        """
+        Returns a set of [x,y] coordinates of the cell the marker lays within
+        """
         set_coords = []
         for mi, marker_pos in enumerate(marker_positions):
             loc = [marker_pos.x, marker_pos.y]  # TODO: change to tuple
@@ -127,7 +136,9 @@ class Grid:
         return set_coords
 
     def add_obstacles(self, obstacles):
-        # color all the cells the obstacles touch
+        """
+        Colors all the cells that are blocked by obstacles.
+        """
         print(obstacles)
         for obst in obstacles:
             obst_cord = self.get_positions_list(obst.positions)
@@ -137,20 +148,18 @@ class Grid:
 
     def add_robots(self, robots, tolerance=1):
         """
-            a word on tolerance: it describes how "strict" the system will be in order to recognize a robot
-            tolerance of 0: all markers must be in one cell
-            tolerance of 1: all markers but one must be in the same cell
-            tolerance of 2: majority of markers must be in one cell
-            if the robot's configuration is outside of the specified tolerance, it will highlight all the cells the robot touches
+        A word on tolerance: it describes how "strict" the system will be in order to recognize a robot
+        tolerance of 0: all markers must be in one cell
+        tolerance of 1: all markers but one must be in the same cell
+        tolerance of 2: majority of markers must be in one cell
+        If the robot's configuration is outside of the specified tolerance, it will highlight all the cells the robot touches
         """
-        for robot in robots:
-            robot_cords = self.get_positions_list(robot.positions)
+        for id, robot_markers in robots:
+            robot_cords = self.get_positions_list(robot_markers.positions)
             relevant_cells = [self.xy_to_cell(coord) for coord in robot_cords]
             # check if the robot is out of bounds
             in_bounds = True
             for cell in relevant_cells:
-                x = int(self.x_dim / self.cell_size)
-                y = int(self.y_dim / self.cell_size)
                 if (cell[0] >= self.y_range[1] or cell[0] <= self.y_range[0] or cell[1] >= self.x_range[1] or cell[1] <=
                         self.x_range[0]):
                     print("y: ", cell[0], "x: ", cell[1])
@@ -167,15 +176,16 @@ class Grid:
                         self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
                     elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
                         self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
-                    self.bots[type] = [mode_cell[0], mode_cell[1]]
+                    self.bots[id] = [mode_cell[0], mode_cell[1]]
+
                 elif tolerance == 1 and relevant_cells.count(mode_cell) >= len(
                         relevant_cells) - 1:  # all cells but one are in the same cell
                     if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value:
                         self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
                     elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
                         self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
+                    self.bots[id] = [mode_cell[0], mode_cell[1]]
 
-                    self.bots[type] = [mode_cell[0], mode_cell[1]]
                 elif tolerance == 2 and relevant_cells.count(
                         mode_cell) >= majority_count:  # majority cells are in the same cell
                     if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value:
@@ -183,64 +193,18 @@ class Grid:
                     elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
                         self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
 
-                    self.bots[type] = [mode_cell[0], mode_cell[1]]
+                    self.bots[id] = [mode_cell[0], mode_cell[1]]
                 else:  # if it does not qualify as being in one cell
-                    self.bad_bots.append(type)  # add its id to the list of bad robots
+                    self.bad_bots.append(id)  # add its id to the list of bad robots
                     # highlight all the cells it touches
                     for cell in relevant_cells:
                         self.grid[cell[0]][cell[1]] = CellVal.ROBOT_PARTIAL.value
 
-    def add_body(self, type, body_coords, tolerance=1):
-        #a word on tolerance: it describes how "strict" the system will be in order to recognize a robot
-        #   tolerance of 0: all markers must be in one cell
-        #   tolerance of 1: all markers but one must be in the same cell
-        #   tolerance of 2: majority of markers must be in one cell
-        #if the robot's configuration is outside of the specified tolerance, it will highlight all the cells the robot touches
-        # if type is obstacle, then color all the cells it touches
-        if type == -1: #obstacle
-            blocked_cells = self.__get_blocked_cells(body_coords)
-            for coord in blocked_cells:
-               self.grid[coord[0]][coord[1]] = CellVal.OBSTACLE_REAL.value
-        # if type is robot, then if it's mostly concentrated on one cell color it, if it's spread out color all of them
-        else: #robot
-            relevant_cells = [self.xy_to_cell(coord) for coord in body_coords]
-            #check if the robot is out of bounds
-            in_bounds = True
-            for cell in relevant_cells:
-                x = int(self.x_dim / self.cell_size)
-                y = int(self.y_dim / self.cell_size)
-                if (cell[0] >= self.y_range[1] or cell[0] <= self.y_range[0] or cell[1] >= self.x_range[1] or cell[1] <= self.x_range[0]):
-                    print("y: ", cell[0], "x: ", cell[1])
-                    self.out_of_bounds_bots.append(type)
-                    in_bounds = False
-                    break
-            if in_bounds:
-                #robot is in bounds; we color it depending on whether it is fully inside a cell or not
-                #also need to check for collisions
-                mode_cell = mode(relevant_cells)
-                majority_count = len(relevant_cells) / 2
-                if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):#all cells are in one
-                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
-                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
-                    self.bots[type] = [mode_cell[0], mode_cell[1]]
-                elif tolerance == 1 and relevant_cells.count(mode_cell) >= len(relevant_cells) - 1:#all cells but one are in the same cell
-                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
-                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
 
-                    self.bots[type] = [mode_cell[0], mode_cell[1]]
-                elif tolerance == 2 and relevant_cells.count(mode_cell) >= majority_count:#majority cells are in the same cell
-                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
-                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value: self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
-
-                    self.bots[type] = [mode_cell[0], mode_cell[1]]
-                else: #if it does not qualify as being in one cell
-                    self.bad_bots.append(type) #add its id to the list of bad robots
-                    # highlight all the cells it touches
-                    for cell in relevant_cells:
-                        self.grid[cell[0]][cell[1]] = CellVal.ROBOT_PARTIAL.value
-
-    #related to __get_blocked_cells
     def __line_grid_intersection(self, p1, p2, dr):
+        """
+        Being called from '__get_blocked_cells' to find intersection of line with a grid cell.
+        """
         ls = LineString([p1, p2])
         points_on_line = []
         line_length = np.ceil(ls.length)
@@ -257,17 +221,24 @@ class Grid:
         return cells
 
     def process_collisions(self):
-        #if there are any robots that are overlapping with obstacles, color them a certain color
-        #go through list of self bots and check their coordinates
+        """
+        If there are any robots that are overlapping with obstacles, color them with a certain color.
+        Goes through list of self bots and check theirs coordinates.
+        It checks if there is an obstacle on any of their coordinates.
+        If there is, change the cell's value to some other color.
+        """
         for key, value in self.bots.items():
             if self.grid[value[0]][value[1]] == CellVal.OBSTACLE_REAL:
                 print('found collision at ', value)
                 self.grid[value[0]][value[1]] = CellVal.COLLISION
-        #check if there is an obstacle on any of their coordinates
-        #if there is, change the cell's value to some other color
 
-    #places artificial obstacles around the desired arena
+
+    #
     def restrict_arena(self):
+        """
+        Places artificial obstacles around the desired arena
+        TODO: Not sure that it is necessary, try to draw only a grid that represents the actual arena
+        """
         #if we have our corner markers in the scene, use those; otherwise, use the built-in parameters
         if len(self.corners) == 4:
             x_min = max(self.corners[Corner.TOPLEFT.value][0], self.corners[Corner.BOTTOMLEFT.value][0])
@@ -311,16 +282,18 @@ class Grid:
         for cell in borders:
             self.grid[cell[0]][cell[1]] = CellVal.OBSTACLE_ART.value
 
-    # convert x and y from Motive to new coordinate system
     def xy_to_cell(self, loc):
+        """
+        Converts x and y from Motive to new coordinate system
+        """
         x = -loc[0]
         y = -loc[1]
         return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
 
-    # def cell_to_xy(self, cell):
-    #     return -(cell[0] - self.origin_cell[0]) * self.cell_size , -(cell[1] - self.origin_cell[1]) * self.cell_size
-
     def process_corners(self, corners, dist = 0.15):
+        """
+        Sets the boundary of the arena according to the corners positions.
+        """
         #dist is in cm
         for corner in corners:
             name = corner['name']
@@ -363,19 +336,24 @@ class Grid:
                 id = 3
             self.corners[id] = [y, x] #here we swap the x's and y's. switching them to cartesian (visual)
 
-    # initialize heatmap to be used to display the plot; should be called before plot_render()
     def plot_init_heatmap(self):
+        """
+        Initializes a heatmap to be used to display the plot; should be called before plot_render()
+        """
         self.fig, self.ax = plt.subplots(1, 1)
         bounds = range(self.cMap.N)
-        norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
+        #norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         data = self.grid
         self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=0.01, cmap=self.cMap, vmin=0, vmax=5)
         self.fig.canvas.draw()
         plt.gca().invert_yaxis()
         self.fig.show()
 
-    # takes an existing .scen file and loads end spots from it
     def init_from_scene(self, event=None):
+        """
+        Takes an existing .scen file and loads goal locations from it.
+        TODO: test and verify it's working correctly
+        """
         scen_file = open(self.scenfile, 'r')
         for line in scen_file:
             if line[0] == 'v':
@@ -384,18 +362,23 @@ class Grid:
             if int(data[0]) in self.bots:
                 self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
 
-    # takes an existing .txt file and initializes END spots from it (user's choice), also creates a new .scen file
     def init_from_file(self, event=None):
+        """
+        Takes an existing .txt file and initializes goal locations from it (user's choice), also creates a new .scen file
+        TODO: test and verify it's working correctly. Also, what is the difference from "init_from_scene'?
+        """
         txt_file = open(self.end_locations_file, 'r')
         for line in txt_file:
-            data = line.split('   ') #python doesn't recognize tab characters for some reason
+            data = line.split('   ')  # python doesn't recognize tab characters for some reason
             print("data: ", data)
             if int(data[0]) in self.bots:
                 print('recognized robot', data[0])
-                if (self.grid[int(data[2])][int(data[1])] != 0): #if the spot isn't available
+                if (self.grid[int(data[2])][int(data[1])] != 0):  # if the spot isn't available
                     print("not available")
                     continue
-                if (int(data[1]) >= self.x_range[1] or int(data[1]) <= self.x_range[0] or int(data[2]) >= self.y_range[1] or int(data[2]) <= self.y_range[0]): #if the cell is out of bounds
+                if (int(data[1]) >= self.x_range[1] or int(data[1]) <= self.x_range[0] or
+                        int(data[2]) >= self.y_range[1] or int(data[2]) <= self.y_range[0]):
+                    # if the cell is out of bounds
                     print("space requested is out of bounds")
                     continue
                 print("coordinates for robot ", data[0], "will be ", int(data[2]), int(data[1]))
@@ -500,7 +483,6 @@ class Grid:
         plt.pause(0.5)
         self.out_of_bounds_bots = []
 
-
     def run_planner(self, event=None):
         print("planner called")
         os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.mapfile} -a {self.scenfile} -o test.csv --outputPaths={self.pathsfile} -k {len(self.bots)} -t 60')
@@ -571,7 +553,6 @@ class Grid:
         f.close()
         self.has_paths = False
         print(".scen file generated")
-
 
     def get_empty_spot(self):
         while True: #choose within borders of arena, not the 12x12

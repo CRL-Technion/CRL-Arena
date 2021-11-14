@@ -110,7 +110,7 @@ simple_listener_mock = ListenerMock(
                                       Position(x=0.6110214591026306, y=0.6120184063911438, z=0.16515624523162842),
                                       Position(x=0.5278427600860596, y=0.5316101312637329, z=0.16333530843257904)]),
                  MarkerSet(name="Ruby-1",
-                           type=MarkerSetType.Corner,
+                           type=MarkerSetType.Robot,
                            positions=[Position(x=-0.8884782195091248, y=1.829779863357544, z=0.16961832344532013),
                                       Position(x=-0.8893804550170898, y=1.8923441171646118, z=0.1441146433353424),
                                       Position(x=-0.7864573001861572, y=1.860068917274475, z=0.1453550159931183)]),

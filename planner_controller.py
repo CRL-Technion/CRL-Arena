@@ -32,7 +32,9 @@ class PlannerController(Thread):
             marker_sets = self.listener.marker_sets
             corners = [ms.to_dict() for ms in marker_sets if ms.type == MarkerSetType.Corner]
             obstacles = [ms for ms in marker_sets if ms.type == MarkerSetType.Obstacle]
-            robots = [ms for ms in marker_sets if ms.type == MarkerSetType.Robot]
+
+            # (robot_id, MarkersSet)
+            robots = [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
 
             self.grid.reset_grid() # TODO: understand how to re draw without resetting every time
 
