@@ -609,7 +609,7 @@ class Grid:
     def distance(self, loc1, loc2):
         return np.linalg.norm(np.array(loc1)-np.array(loc2), 2)
 
-    def paths_to_plan(self,):
+    def paths_to_plan(self):
         """
         Converts the output of the CBS planner to the input of Hadar's ROS code and saves it in a file by the name of
         grid.planfile
