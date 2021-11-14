@@ -1,43 +1,47 @@
 import matplotlib as mpl
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-from statistics import mode
+import numpy as np
 import astar
 import os
-
-from matplotlib.widgets import Button
-
 import random
-
 import itertools
-from shapely.geometry import LineString
-from enum import Enum
 
+from enum import Enum
+from statistics import mode
+from matplotlib.colors import ListedColormap
+from matplotlib.widgets import Button
+from shapely.geometry import LineString
 from paths_to_plan_func import paths_to_plan
 
+
 class CellVal(Enum):
-    #represents the values that populate the grid (and match with the colors that appear on the grid)
+    # represents the values that populate the grid (and match with the colors that appear on the grid)
     EMPTY = 0
-    COLLISION = 1 #a robot and a real obstacle occupy the same cell
-    ROBOT_FULL = 2 #entire robot is on one cell
-    ROBOT_PARTIAL = 3 #robot is spread out over multiple cells
+    COLLISION = 1  #a robot and a real obstacle occupy the same cell
+    ROBOT_FULL = 2  #entire robot is on one cell
+    ROBOT_PARTIAL = 3  #robot is spread out over multiple cells
     OBSTACLE_REAL = 4
-    OBSTACLE_ART = 5 #artificial obstacle
+    OBSTACLE_ART = 5  #artificial obstacle
+
 
 class Corner(Enum):
-    #values associated with corner markers
+    # values associated with corner markers
     TOPLEFT = 1
     TOPRIGHT = 2
     BOTTOMLEFT = 3
     BOTTOMRIGHT = 4
 
-#this class is the visual representation of the arena, including robots, obstacles, and borders.
+
 class Grid:
-    # A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file
-    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='data/map.map', scen_filename:str= 'data/scenario.scen', end_locations_filename:str = 'data/end_locations.txt', paths_filename:str = 'data/paths.txt', plan_filename:str='data/plan.txt', ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"
-):
-        '''
+    """
+    This class is the visual representation of the arena, including robots, obstacles, and borders.
+    A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file.
+    """
+    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='data/map.map',
+                 scen_filename:str= 'data/scenario.scen', end_locations_filename:str = 'data/end_locations.txt',
+                 paths_filename:str = 'data/paths.txt', plan_filename:str='data/plan.txt',
+                 ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"):
+        """
         x_dim: in meters, size of overall arena; maximum 12
         y_dim: in meters, size of overall arena; maximum 12
         cell_size: in meters
@@ -47,7 +51,7 @@ class Grid:
         paths_filename: name of .txt file where planner will output paths
         plan_filename: name of .txt file to be sent to ubuntu
         ubuntu_dir: name of directory in the ubuntu computer to send plan
-        '''
+        """
 
         # arena dimensions (within greater 12x12 scope)
         self.x_dim = min(x_dim, 12)  # m
@@ -55,11 +59,11 @@ class Grid:
         self.corners = {}
 
         self.cell_size = cell_size  # m
-        #rows and columns are like the larger grid, while x and y dim are the smaller arena
+        # rows and columns are like the larger grid, while x and y dim are the smaller arena
         self.rows = int(12 / cell_size)
         self.cols = int(12 / cell_size)
         self.origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
-        #x and y ranges defined below are default values (will be replaced if corner markers present)
+        # x and y ranges defined below are default values (will be replaced if corner markers present)
         self.x_range = [self.origin_cell[0] - self.x_dim / self.cell_size // 2, self.origin_cell[0] + self.x_dim / self.cell_size // 2]
         self.y_range = [self.origin_cell[1] - self.y_dim / self.cell_size // 2, self.origin_cell[1] + self.y_dim / self.cell_size // 2]
         # the grid itself with values
@@ -69,8 +73,10 @@ class Grid:
         # variables related to matplotlib visualization
         self.fig = None
         self.ax = None
-        self.cMap = mpl.colors.ListedColormap([(1,1,1), (1, 0.4, 0.57), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)]) #white  green red black gray
-        #, (1, 0.4, 0.57)
+
+        # [white, green, red, black, gray]
+        self.cMap = mpl.colors.ListedColormap([(1,1,1), (1, 0.4, 0.57), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)])
+
         self.heatmap = None
         self.anns = []
         self.cid = None
@@ -85,18 +91,15 @@ class Grid:
         self.has_paths = False
         self.ubuntu_host_dir = ubuntu_dir
 
-
-
-        #association of robots with their ID
-        self.bots = {} #maps bot IDs to current spot
-        self.end_bots = {} #maps bot ID's to end spot (if one exists)
-        self.bad_bots = [] #simple list of all robots that aren't completely on one cell
-        self.out_of_bounds_bots = [] #simple list of all robots that aren't completely within the bounds of the arena
-        self.bot_boxes = [] #all the text boxes representing robots
-        self.end_boxes = [] #all the text boxes representing the robots' end locations
+        # association of robots with their ID
+        self.bots = {}  # maps bot IDs to current spot
+        self.end_bots = {}  # maps bot ID's to end spot (if one exists)
+        self.bad_bots = []  # simple list of all robots that aren't completely on one cell
+        self.out_of_bounds_bots = []  # simple list of all robots that aren't completely within the bounds of the arena
+        self.bot_boxes = []  # all the text boxes representing robots
+        self.end_boxes = []  # all the text boxes representing the robots' end locations
 
         # saves path after running the solver
-        # self.solution_paths_raw = {}
         self.solution_paths_translated = {}
         self.SEND_SOLUTION = False
 
@@ -334,7 +337,7 @@ class Grid:
                 x = max(position[0] for position in grid_positions)
                 y = min(position[1] for position in grid_positions)
                 id = 3
-            self.corners[id] = [y, x] #here we swap the x's and y's. switching them to cartesian (visual)
+            self.corners[id] = [y, x]  # here we swap the x's and y's. switching them to cartesian (visual)
 
     def plot_init_heatmap(self):
         """
@@ -342,7 +345,7 @@ class Grid:
         """
         self.fig, self.ax = plt.subplots(1, 1)
         bounds = range(self.cMap.N)
-        #norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
+        # norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         data = self.grid
         self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=0.01, cmap=self.cMap, vmin=0, vmax=5)
         self.fig.canvas.draw()
