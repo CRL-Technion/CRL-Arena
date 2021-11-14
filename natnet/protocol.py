@@ -400,7 +400,8 @@ class Protocol(object):
             # print('Model Name: {}'.format(model_name))
 
             shift, positions = self.unpack_positions(data[offset:])
-            marker_sets.append(MarkerSet(model_name, positions))
+            ms_type = self.get_markerset_type_from_name(model_name)  # TODO: test against real data from motive
+            marker_sets.append(MarkerSet(model_name, positions, ms_type))
             offset += shift
 
         return offset, marker_sets
@@ -603,3 +604,16 @@ class Protocol(object):
         data += command_string.encode('utf-8')
         data += b'\0'
         return data
+
+    def get_markerset_type_from_name(self, model_name):
+        name_lower = model_name.lower()
+        if "obst" in name_lower:
+            return MarkerSetType.Obstacle
+        elif "corner" in name_lower:
+            return MarkerSetType.Corner
+        elif "all" in name_lower:
+            return MarkerSetType.All
+        else:
+            # TODO: consider defining the names of robots in motive with suffix 'Robot_' and then change the
+            #  condition here, where default value is MarkerSetType.NoType
+            return MarkerSetType.Robot

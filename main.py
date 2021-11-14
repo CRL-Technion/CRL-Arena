@@ -19,7 +19,6 @@ def main():
 
     # start the listener
     listener.start()
-
     # initialize a planner: draws the arena and allows to run solution planning
     planner_controller = PlannerController(listener=listener)
     planner_controller.start()

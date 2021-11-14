@@ -142,7 +142,6 @@ class Grid:
         """
         Colors all the cells that are blocked by obstacles.
         """
-        print(obstacles)
         for obst in obstacles:
             obst_cord = self.get_positions_list(obst.positions)
             blocked_cells = self.__get_blocked_cells(obst_cord)
