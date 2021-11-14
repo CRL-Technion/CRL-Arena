@@ -39,7 +39,6 @@ def euler_from_quaternion(quat):
 
 
     return numpy.degrees(pitch), numpy.degrees(yaw), numpy.degrees(roll)
-    return roll, pitch, yaw
 
 
 

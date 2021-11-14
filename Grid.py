@@ -11,7 +11,6 @@ from statistics import mode
 from matplotlib.colors import ListedColormap
 from matplotlib.widgets import Button
 from shapely.geometry import LineString
-from paths_to_plan_func import paths_to_plan
 
 
 class CellVal(Enum):
@@ -32,6 +31,7 @@ class Corner(Enum):
     BOTTOMRIGHT = 4
 
 
+# TODO: Clean the entire class code - remove unnecessary lines and methods and simplify logic
 class Grid:
     """
     This class is the visual representation of the arena, including robots, obstacles, and borders.
@@ -490,7 +490,7 @@ class Grid:
         os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.mapfile} -a {self.scenfile} -o test.csv --outputPaths={self.pathsfile} -k {len(self.bots)} -t 60')
         print("planner finished")
         self.has_paths = True
-        paths_to_plan(paths=self.pathsfile, plan=self.planfile)
+        self.paths_to_plan()
         if self.SEND_SOLUTION:
             os.system(f'pscp -pw qawsedrf {self.planfile} {self.ubuntu_host_dir}')
 
@@ -608,6 +608,50 @@ class Grid:
 
     def distance(self, loc1, loc2):
         return np.linalg.norm(np.array(loc1)-np.array(loc2), 2)
+
+    def paths_to_plan(self,):
+        """
+        Converts the output of the CBS planner to the input of Hadar's ROS code and saves it in a file by the name of
+        grid.planfile
+        TODO: not sure it belongs to 'Grid' class, consider moving to some general 'utility' class
+        """
+        paths_file = open(self.pathsfile, "r")
+        plan_file = open(self.planfile, "w")
+
+        plan_file.write("schedule:\n")
+        all_robots_starts_at_zero_zero = True
+
+        for line in paths_file:
+            # get and write agent number
+            space_idx = line.index(" ")
+            colon_idx = line.index(":")
+            id = line[space_idx:colon_idx]
+            plan_file.write("\tagent" + id.replace(" ", "") + ":\n")
+
+            # get sequence of coordinates
+            path_string = line[colon_idx + 2::]
+            path_list = path_string.split('->')
+
+            # parse and write out coordinates
+            start_location = []
+            counter = 0
+            for coord in path_list:
+                if coord == '\n' or coord == '':
+                    continue
+                else:
+                    coord = coord[1:-1]
+                    # this is to compensate for the flipped coordinates that the planner outputs
+                    y, x = coord.split(',')
+
+                    if all_robots_starts_at_zero_zero:
+                        if not start_location:
+                            start_location = [x, y]
+                        x = str(int(x) - int(start_location[0]))
+                        y = str(-(int(y) - int(start_location[1])))
+                    plan_file.write('\t\t- x: ' + x + '\n\t\t y: ' + y + '\n\t\t t: ' + str(counter) + '\n')
+                    counter = counter + 1
+        plan_file.close()
+        return self.pathsfile
 
 
 if __name__ == "__main__":
