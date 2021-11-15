@@ -37,10 +37,15 @@ class Grid:
     This class is the visual representation of the arena, including robots, obstacles, and borders.
     A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file.
     """
-    def __init__(self, x_dim:int=10, y_dim:int=6, cell_size:float=1.0, map_filename:str='data/map.map',
-                 scen_filename:str= 'data/scenario.scen', end_locations_filename:str = 'data/end_locations.txt',
-                 paths_filename:str = 'data/paths.txt', plan_filename:str='data/plan.txt',
-                 ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"):
+    def __init__(self, x_dim:int=10, y_dim:int=6,
+                 cell_size:float=1.0,
+                 map_filename:str='data/map.map',
+                 scen_filename:str= 'data/scenario.scen',
+                 end_locations_filename:str = 'data/end_locations.txt',
+                 paths_filename:str = 'data/paths.txt',
+                 plan_filename:str='data/plan.txt',
+                 ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"
+                 ):
         """
         x_dim: in meters, size of overall arena; maximum 12
         y_dim: in meters, size of overall arena; maximum 12
@@ -54,11 +59,11 @@ class Grid:
         """
 
         # arena dimensions (within greater 12x12 scope)
-        self.x_dim = min(x_dim, 12)  # m
-        self.y_dim = min(y_dim, 12)  # m
+        self.x_dim = min(x_dim, 12)  # meters
+        self.y_dim = min(y_dim, 12)  # meters
         self.corners = {}
 
-        self.cell_size = cell_size  # m
+        self.cell_size = cell_size  # meters
         # rows and columns are like the larger grid, while x and y dim are the smaller arena
         self.rows = int(12 / cell_size)
         self.cols = int(12 / cell_size)
@@ -67,8 +72,8 @@ class Grid:
         self.x_range = [self.origin_cell[0] - self.x_dim / self.cell_size // 2, self.origin_cell[0] + self.x_dim / self.cell_size // 2]
         self.y_range = [self.origin_cell[1] - self.y_dim / self.cell_size // 2, self.origin_cell[1] + self.y_dim / self.cell_size // 2]
         # the grid itself with values
-        self.grid = []
-        self.reset_grid()
+        self.grid = []  # This is a 2D array representing the grid (!!!)
+        #self.reset_grid()
 
         # variables related to matplotlib visualization
         self.fig = None
@@ -150,6 +155,7 @@ class Grid:
 
     def add_robots(self, robots, tolerance=1):
         """
+        Adds a robot to the grid and colors the relevant cell accordingly.
         A word on tolerance: it describes how "strict" the system will be in order to recognize a robot
         tolerance of 0: all markers must be in one cell
         tolerance of 1: all markers but one must be in the same cell
@@ -157,51 +163,45 @@ class Grid:
         If the robot's configuration is outside of the specified tolerance, it will highlight all the cells the robot touches
         """
         for id, robot_markers in robots:
+            # calculate the grid cells that the robots markers lay within
             robot_cords = self.get_positions_list(robot_markers.positions)
-            relevant_cells = [self.xy_to_cell(coord) for coord in robot_cords]
-            # check if the robot is out of bounds
-            in_bounds = True
-            for cell in relevant_cells:
-                if (cell[0] >= self.y_range[1] or cell[0] <= self.y_range[0] or cell[1] >= self.x_range[1] or cell[1] <=
-                        self.x_range[0]):
-                    print("y: ", cell[0], "x: ", cell[1])
-                    self.out_of_bounds_bots.append(type)
-                    in_bounds = False
-                    break
-            if in_bounds:
-                # robot is in bounds; we color it depending on whether it is fully inside a cell or not
-                # also need to check for collisions
-                mode_cell = mode(relevant_cells)
-                majority_count = len(relevant_cells) / 2
-                if tolerance == 0 and relevant_cells.count(mode_cell) == len(relevant_cells):  # all cells are in one
-                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value:
-                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
-                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
-                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
-                    self.bots[id] = [mode_cell[0], mode_cell[1]]
+            relevant_markers_cells = [self.xy_to_cell(coord) for coord in robot_cords]
 
-                elif tolerance == 1 and relevant_cells.count(mode_cell) >= len(
-                        relevant_cells) - 1:  # all cells but one are in the same cell
-                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value:
-                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
-                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
-                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
-                    self.bots[id] = [mode_cell[0], mode_cell[1]]
+            # check if the robot is out of the grid's bounds
+            # consider out of bounds if one of the markers is out of bounds
+            in_bounds = all(self.marker_in_bound(marker_cell) for marker_cell in relevant_markers_cells)
+            if not in_bounds:
+                self.out_of_bounds_bots.append((id, relevant_markers_cells))
 
-                elif tolerance == 2 and relevant_cells.count(
-                        mode_cell) >= majority_count:  # majority cells are in the same cell
-                    if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value:
-                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
-                    elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
-                        self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
+            else:
+                # robot is in bounds.
+                # the color that the robot would appear with is depending on whether it is fully inside a cell or not.
+                # we also check for collisions with obstacles or between robots
+                mode_cell = mode(relevant_markers_cells)  # get the most common grid cell from the markers list
+                majority_count = len(relevant_markers_cells) / 2  # how many markers count as a majority
 
-                    self.bots[id] = [mode_cell[0], mode_cell[1]]
-                else:  # if it does not qualify as being in one cell
+                if relevant_markers_cells.count(mode_cell) == len(relevant_markers_cells):
+                    # all markers are in one cell
+                    self.set_cell_color(id, mode_cell)
+
+                elif relevant_markers_cells.count(mode_cell) >= len(relevant_markers_cells) - 1 \
+                        and tolerance == 1:
+                    # all markers but one are in the same cell
+                    # if tolerance is 1 then it is ok
+                    self.set_cell_color(id, mode_cell)
+
+                elif relevant_markers_cells.count(mode_cell) >= majority_count and tolerance == 2:
+                    # majority markers are in the same cell
+                    # if tolerance is 2 then it is ok
+                    self.set_cell_color(id, mode_cell)
+
+                else:
+                    # the current location of the markers does not qualify as being in one cell
+                    # according to the provided tolerance
                     self.bad_bots.append(id)  # add its id to the list of bad robots
                     # highlight all the cells it touches
-                    for cell in relevant_cells:
+                    for cell in relevant_markers_cells:
                         self.grid[cell[0]][cell[1]] = CellVal.ROBOT_PARTIAL.value
-
 
     def __line_grid_intersection(self, p1, p2, dr):
         """
@@ -234,12 +234,11 @@ class Grid:
                 print('found collision at ', value)
                 self.grid[value[0]][value[1]] = CellVal.COLLISION
 
-
-    #
     def restrict_arena(self):
         """
         Places artificial obstacles around the desired arena
         TODO: Not sure that it is necessary, try to draw only a grid that represents the actual arena
+        TODO: simplify method
         """
         #if we have our corner markers in the scene, use those; otherwise, use the built-in parameters
         if len(self.corners) == 4:
@@ -292,11 +291,14 @@ class Grid:
         y = -loc[1]
         return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
 
-    def process_corners(self, corners, dist = 0.15):
+    def process_corners(self, corners):
         """
         Sets the boundary of the arena according to the corners positions.
+        TODO: simplify method
         """
         #dist is in cm
+        dist = self.cell_size / 2.0
+
         for corner in corners:
             name = corner['name']
             grid_positions = []
@@ -343,7 +345,7 @@ class Grid:
         Initializes a heatmap to be used to display the plot; should be called before plot_render()
         """
         self.fig, self.ax = plt.subplots(1, 1)
-        bounds = range(self.cMap.N)
+        # bounds = range(self.cMap.N)
         # norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
         data = self.grid
         self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=0.01, cmap=self.cMap, vmin=0, vmax=5)
@@ -393,10 +395,12 @@ class Grid:
         txt_file.close()
 
     def plot_render(self):
+        # Notify about robots that are out of bounds
+        for robot_id, markers in self.out_of_bounds_bots:
+            print(f"Robot {robot_id} is out of bounds and will not be shown in the visualization.\n"
+                  f"Its markers are located in cells: {markers}")
 
-        if len(self.out_of_bounds_bots) > 0:
-            print("the following robots are out of bounds and will not be shownin the visualization: ", self.out_of_bounds_bots)
-        if self.heatmap == None:
+        if not self.heatmap:
             self.plot_init_heatmap()
         # re-plot grid with up-to-date values; should be called after updating/adding values
         self.restrict_arena()
@@ -652,6 +656,24 @@ class Grid:
                     counter = counter + 1
         plan_file.close()
         return self.pathsfile
+
+    def marker_in_bound(self, marker_cell):
+        """
+        Checks that a marker is located within the grid's boundaries
+        """
+        # TODO: verify x and y correctness
+        return (self.y_range[1] > marker_cell[0] > self.y_range[0]) \
+               and (self.x_range[1] > marker_cell[1] > self.x_range[0])
+
+    def set_cell_color(self, robot_id, mode_cell):
+        """
+        Sets a robot's cell color according to the actual situation
+        """
+        if self.grid[mode_cell[0]][mode_cell[1]] == CellVal.EMPTY.value:
+            self.grid[mode_cell[0]][mode_cell[1]] = CellVal.ROBOT_FULL.value
+        elif self.grid[mode_cell[0]][mode_cell[1]] == CellVal.OBSTACLE_REAL.value:
+            self.grid[mode_cell[0]][mode_cell[1]] = CellVal.COLLISION.value
+        self.bots[robot_id] = [mode_cell[0], mode_cell[1]]
 
 
 if __name__ == "__main__":
