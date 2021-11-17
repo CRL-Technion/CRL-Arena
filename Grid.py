@@ -37,7 +37,8 @@ class Grid:
     This class is the visual representation of the arena, including robots, obstacles, and borders.
     A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file.
     """
-    def __init__(self, x_dim:int=10, y_dim:int=6,
+    def __init__(self, broadcast_cond,
+                 x_dim:int=10, y_dim:int=6,
                  cell_size:float=1.0,
                  map_filename:str='data/map.map',
                  scen_filename:str= 'data/scenario.scen',
@@ -57,6 +58,8 @@ class Grid:
         plan_filename: name of .txt file to be sent to ubuntu
         ubuntu_dir: name of directory in the ubuntu computer to send plan
         """
+
+        self.broadcast_cond = broadcast_cond
 
         # arena dimensions (within greater 12x12 scope)
         self.x_dim = min(x_dim, 12)  # meters
@@ -240,7 +243,7 @@ class Grid:
         TODO: Not sure that it is necessary, try to draw only a grid that represents the actual arena
         TODO: simplify method
         """
-        #if we have our corner markers in the scene, use those; otherwise, use the built-in parameters
+        # if we have our corner markers in the scene, use those; otherwise, use the built-in parameters
         if len(self.corners) == 4:
             x_min = max(self.corners[Corner.TOPLEFT.value][0], self.corners[Corner.BOTTOMLEFT.value][0])
             x_max = min(self.corners[Corner.TOPRIGHT.value][0], self.corners[Corner.BOTTOMRIGHT.value][0])
@@ -394,6 +397,14 @@ class Grid:
             print("ERROR: Scenario file could not be generated because end locations were not found or out of bounds.")
         txt_file.close()
 
+    def broadcast_solution(self, event=None):
+        """
+        Called when pressing the "Broadcast solution data" button.
+        notifies the main thread to initialize data transmission via UDP.
+        """
+        with self.broadcast_cond:
+            self.broadcast_cond.notify()
+
     def plot_render(self):
         # Notify about robots that are out of bounds
         for robot_id, markers in self.out_of_bounds_bots:
@@ -466,6 +477,7 @@ class Grid:
         ax_from_scen = plt.axes([0.58, -0.01, 0.1, 0.075])
         ax_make_scen = plt.axes([0.7, -0.01, 0.1, 0.075])
         ax_end_locs = plt.axes([0.35, -0.01, 0.1, 0.075])
+        ax_udp = plt.axes([0.2, -0.01, 0.1, 0.075])
         button_scenario = Button(ax_make_scen, 'Make .SCEN')
         button_scenario.label.set_fontsize(5)
         button_scenario.on_clicked(self.make_scen)
@@ -478,6 +490,9 @@ class Grid:
         button_end_locs = Button(ax_end_locs, 'Choose End Locs')
         button_end_locs.on_clicked(self.init_from_file)
         button_end_locs.label.set_fontsize(5)
+        button_udp = Button(ax_udp, 'Broadcast solution \n data')
+        button_udp.on_clicked(self.broadcast_solution)
+        button_udp.label.set_fontsize(5)
 
         self.ax.draw_artist(self.ax.patch)
         self.ax.draw_artist(self.heatmap)

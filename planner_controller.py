@@ -11,7 +11,7 @@ from natnet.protocol import MarkerSetType
 
 class PlannerController(Thread):
 
-    def __init__(self, listener, cell_size=0.3, plan_filename='data/algorithm_output'):
+    def __init__(self, listener, broadcast_cond, cell_size=0.3, plan_filename='data/algorithm_output'):
         super(PlannerController, self).__init__()
 
         self.listener = listener
@@ -21,7 +21,7 @@ class PlannerController(Thread):
         # TODO: find out how to get the distance between corners (from motive data) and pass it as x_dim and y_dim
         #  to create a grid with the exact size as the arena.
         #  later need to remove "restrict_arena" and fix coordinates translation everywhere
-        self.grid = Grid(cell_size=self.cell_size, plan_filename=plan_filename)
+        self.grid = Grid(broadcast_cond=broadcast_cond, cell_size=self.cell_size, plan_filename=plan_filename)
 
     def get_adjusted_markers_positions(self, marker_set):
         """
