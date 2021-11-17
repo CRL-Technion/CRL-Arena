@@ -1,11 +1,7 @@
-from threading import Thread
-from Listener import Listener, ListenerType
-import sys
-import numpy
-
-from Grid import Grid
 import time
 
+from threading import Thread
+from Grid import Grid
 from natnet.protocol import MarkerSetType
 
 

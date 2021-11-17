@@ -11,18 +11,22 @@ from threading import Condition
 import mockup
 
 
-def update_robots_state(robots_bodies):
+def get_robots_state_to_send(robots_bodies):
     to_send = []
 
     for robot_body in robots_bodies:
         body_dict = robot_body.to_dict()
         temp_x = body_dict['rotation']['x']
-        body_dict['rotation']['x'] = body_dict['rotation']['w']  # need to flip what motive sends us a bit (see documentation)
+
+        # need to flip what motive sends us a bit (see documentation)
+        body_dict['rotation']['x'] = body_dict['rotation']['w']
         body_dict['rotation']['w'] = body_dict['rotation']['z']
         body_dict['rotation']['z'] = body_dict['rotation']['y']
         body_dict['rotation']['y'] = temp_x
         temp_x = body_dict['position']['x']
-        body_dict['position']['x'] = body_dict['position']['y'] * -1  # y-coordinate is also flipped based on observation
+
+        # y-coordinate is also flipped based on observation
+        body_dict['position']['x'] = body_dict['position']['y'] * -1
         body_dict['position']['y'] = temp_x
         to_send.append(body_dict)
 
@@ -64,16 +68,17 @@ def main():
 
     # start the server for transmit Motive data via UDP protocol.
     # we use this data to guide the robot (from the Ubuntu computer) and for visualization tools.
-    print("notified!")
     server = UDPServer()
     server.start()
+
+    print("Waiting 2 seconds for the system to stabilized")
     time.sleep(2)
     while True:
-        # the filter here is a convention -
+        # the filter here is based on a convention -
         # all rigid bodies which represent robots have sequential ids starting from 101
         # TODO: remove this convention and replace with generic solution
         robots_bodies = [body for body in listener.bodies if int(body.body_id) // 100 == 1]
-        message = update_robots_state(robots_bodies)
+        message = get_robots_state_to_send(robots_bodies)
         server.update_data(json.dumps(message))
         server.send_data()
         time.sleep(0.1)

@@ -20,25 +20,7 @@ class UDPServer(Thread):
         self.UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.UDPServerSocket.bind((self.localIP, self.localPort))
         self._queue = Queue()
-        #self._data_thread = MyThread(self._queue, self)
-        #self._data_thread.start()
         print("UDP server up and listening")
-
-        # Listen for incoming datagrams
-        # while True:
-        #     data = self._queue.get()
-        #     bytesAddressPair = self.UDPServerSocket.recvfrom(self.bufferSize)
-        #     message = bytesAddressPair[0]
-        #     address = bytesAddressPair[1]
-        #
-        #     clientMsg = "Message from Client:{}".format(message)
-        #     clientIP = "Client IP Address:{}".format(address)
-        #     self.send_data(data, address)
-
-            # Sending a reply to client
-            # msgFromServer = "Hello UDP Client. My Name is Nir."
-            # bytesToSend = str.encode(self._data or "")
-            # self.server.UDPServerSocket.sendto(bytesToSend, address)
 
     def update_data(self, data):
         print("update: ", data)
@@ -56,8 +38,9 @@ class UDPServer(Thread):
         except socket.error as e:
             err = e.args[0]
             if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                # time.sleep(1)
-                print('No data available')
+                # occurs when the client program is not running and nobody tries to pull data
+                print('No client side data available - sleeping 1 second')
+                time.sleep(1)
             else:
                 # a "real" error occurred
                 print(e)
@@ -69,38 +52,3 @@ class UDPServer(Thread):
             print("data at time of sending: ", data)
             bytesToSend = str.encode(data or "")
             self.UDPServerSocket.sendto(bytesToSend, address)
-
-
-
-# class MyThread(threading.Thread):
-#     def __init__(self, queue, server, args=(), kwargs=None):
-#         threading.Thread.__init__(self, args=(), kwargs=None, target=self.run)
-#         self.queue = queue #for now this is data test
-#         self.server = server
-#         self.daemon = True
-#
-#     def run(self):
-#
-#         # Listen for incoming datagrams
-#         while True:
-#             data = self.queue.get()
-#             bytesAddressPair = self.server.UDPServerSocket.recvfrom(self.server.bufferSize)
-#             message = bytesAddressPair[0]
-#             address = bytesAddressPair[1]
-#
-#             clientMsg = "Message from Client:{}".format(message)
-#             clientIP = "Client IP Address:{}".format(address)
-#             self.send_data(data, address)
-#
-#             # Sending a reply to client
-#             # msgFromServer = "Hello UDP Client. My Name is Nir."
-#             # bytesToSend = str.encode(self._data or "")
-#             # self.server.UDPServerSocket.sendto(bytesToSend, address)
-#
-#     def send_data(self, data, address):
-#         print(self.queue.qsize())
-#         print("data at time of sending: ", data)
-#         bytesToSend = str.encode(data or "")
-#         self.server.UDPServerSocket.sendto(bytesToSend, address)
-
-
