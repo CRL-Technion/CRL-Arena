@@ -272,3 +272,5 @@ runtime,#high-level expanded,#high-level generated,#low-level expanded,#low-leve
 2.2e-05,0,1,15,52,13,13,13,13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.000102,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
 2.6e-05,0,1,15,57,13,13,13,13,0,0,0,0,0,0,0,0,0,0,0,1e-06,0,0,0,0,0,0,0,0,0.000124,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
 2e-05,0,1,12,47,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,1e-06,0,0,0,0,0,0,0,0,9.7e-05,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
+2.1e-05,0,1,15,49,13,13,13,13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9.9e-05,WDG+GR+GC+T+BP with AStar,data/scenario.scen:
+2.6e-05,0,1,19,70,17,17,17,17,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.000107,WDG+GR+GC+T+BP with AStar,data/scenario.scen:

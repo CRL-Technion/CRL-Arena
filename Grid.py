@@ -405,6 +405,7 @@ class Grid:
         with self.broadcast_cond:
             self.broadcast_cond.notify()
 
+    # TODO: clean method
     def plot_render(self):
         # Notify about robots that are out of bounds
         for robot_id, markers in self.out_of_bounds_bots:
@@ -451,7 +452,6 @@ class Grid:
                 for i in range(len(paths_clean) - 1):
                     ann = self.ax.annotate("", xy = (int(paths_clean[i][1]) + 0.5,int(paths_clean[i][0]) + 0.5), xytext=(int(paths_clean[i+1][1]) + 0.5,int(paths_clean[i+1][0])+0.5), arrowprops=dict(arrowstyle='-', connectionstyle='arc3'))
                     self.anns.append(ann)
-                # self.solution_paths_raw[id] = []
                 self.solution_paths_translated[id] = paths_clean
 
         for key, value in self.bots.items():
@@ -473,6 +473,7 @@ class Grid:
                 newtxt = self.ax.text(value[1] + 0.5, value[0] + 0.5, str(key), size=12 * self.cell_size, ha="center", va="center", bbox=dict(ec=(0, 0, 0),  boxstyle='circle', fc=(1, .8, 0.8)))
                 self.end_boxes.append(newtxt)
 
+        # TODO: check the warning about opening multiple axes objects
         ax_planner = plt.axes([0.46, -0.01, 0.1, 0.075])
         ax_from_scen = plt.axes([0.58, -0.01, 0.1, 0.075])
         ax_make_scen = plt.axes([0.7, -0.01, 0.1, 0.075])
