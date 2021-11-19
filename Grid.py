@@ -14,17 +14,21 @@ from shapely.geometry import LineString
 
 
 class CellVal(Enum):
-    # represents the values that populate the grid (and match with the colors that appear on the grid)
+    """
+    Represents the state of scenario object to use for drawing the grid
+    """
     EMPTY = 0
-    COLLISION = 1  #a robot and a real obstacle occupy the same cell
-    ROBOT_FULL = 2  #entire robot is on one cell
-    ROBOT_PARTIAL = 3  #robot is spread out over multiple cells
+    COLLISION = 1  # a robot and a real obstacle occupy the same cell
+    ROBOT_FULL = 2  # entire robot is on one cell
+    ROBOT_PARTIAL = 3  # robot is spread out over multiple cells
     OBSTACLE_REAL = 4
-    OBSTACLE_ART = 5  #artificial obstacle
+    OBSTACLE_ART = 5  # artificial obstacle
 
 
 class Corner(Enum):
-    # values associated with corner markers
+    """
+    Values associated with corner markers
+    """
     TOPLEFT = 1
     TOPRIGHT = 2
     BOTTOMLEFT = 3
@@ -86,7 +90,6 @@ class Grid:
         self.cMap = mpl.colors.ListedColormap([(1,1,1), (1, 0.4, 0.57), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)])
 
         self.heatmap = None
-        self.anns = []
         self.cid = None
 
         # variables related to exporting map and scene files and path file
@@ -405,7 +408,7 @@ class Grid:
         with self.broadcast_cond:
             self.broadcast_cond.notify()
 
-    # TODO: clean method
+    # TODO: add detailed explaination about the method
     def plot_render(self):
         # Notify about robots that are out of bounds
         for robot_id, markers in self.out_of_bounds_bots:
@@ -418,42 +421,45 @@ class Grid:
         self.restrict_arena()
         data = self.grid
 
-        #related to color map
-        bounds = range(self.cMap.N)
-        norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
+        # create base grid
         self.heatmap = self.ax.pcolormesh(data, edgecolors='k', linewidths=0.01, cmap=self.cMap, vmin=0, vmax=5)
 
-        #collision processing
+        # process robot-robot and robot-obstacles collisions
         self.process_collisions()
 
-        #paths
+        # draw paths if solution exists
         if self.has_paths:
-            for ann in self.anns:
-                ann.remove()
-            self.anns = []
-            #first, open paths file
-            # pathsfile = open('paths4.txt', 'r')
+            # open paths file
             pathsfile = open(self.pathsfile, 'r')
 
-            #for each line, parse it and create a list of the coordinates
+            # each line in the file contains a path for the matching agent (starting with 0)
+            # parsing the line to get the grid locations along the paths
             for id, line in enumerate(pathsfile):
                 colon_idx = line.index(":")
                 path_string = line[colon_idx + 2::]
                 paths_list = path_string.split('->')
-                #draw lines between each two
+
+                # draw lines between each two
                 paths_clean = []
+
                 for coord in paths_list:
                     if coord == '\n' or coord == '':
                         paths_list.remove(coord)
                     else:
                         clean = coord[1:-1]
-                        clean = clean.split(',')
-                        paths_clean.append(clean)
+                        clean = clean.split(',')  # a list ['x', 'y'] representing a location on a path
+                        paths_clean.append((int(clean[0]), int(clean[1])))  # inserting a tuple of int type
+
+                # draw solution paths on grid (with annotations - draws '-' at each (x,y) location on the path)
                 for i in range(len(paths_clean) - 1):
-                    ann = self.ax.annotate("", xy = (int(paths_clean[i][1]) + 0.5,int(paths_clean[i][0]) + 0.5), xytext=(int(paths_clean[i+1][1]) + 0.5,int(paths_clean[i+1][0])+0.5), arrowprops=dict(arrowstyle='-', connectionstyle='arc3'))
-                    self.anns.append(ann)
+                    self.ax.annotate("", xy = (paths_clean[i][1] + 0.5, paths_clean[i][0] + 0.5),
+                                     xytext=(paths_clean[i+1][1] + 0.5, paths_clean[i+1][0]+0.5),
+                                     arrowprops=dict(arrowstyle='-', connectionstyle='arc3'))
+
+                # save paths with grid cells translation for later passing it to the arena visualizer
                 self.solution_paths_translated[id] = paths_clean
 
+        # TODO: understand exactly what's going here and simplify
         for key, value in self.bots.items():
             new = True
             for text in self.bot_boxes:
@@ -500,11 +506,11 @@ class Grid:
         self.fig.canvas.blit(self.ax.bbox)
         self.fig.canvas.flush_events()
 
-
         # t_end = time.time()
         plt.pause(0.5)
         self.out_of_bounds_bots = []
 
+    # TODO: add descriptions and clean from here
     def run_planner(self, event=None):
         print("planner called")
         os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.mapfile} -a {self.scenfile} -o test.csv --outputPaths={self.pathsfile} -k {len(self.bots)} -t 60')
