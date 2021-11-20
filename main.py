@@ -1,15 +1,27 @@
+import sys
 import time
+import json
+import argparse
+
+import mockup
+
+from threading import Condition
 
 from natnet.protocol import MarkerSetType
 from udp_server import UDPServer
-import json
-import numpy as np
-
 from Listener import Listener, ListenerType
 from planner_controller import PlannerController
-from threading import Condition
 
-import mockup
+class ArgumentsParser:
+    def __init__(self, parser):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-c", "--cell", type=float, help="Sets a grid cell size (in meters), default is 0.3")
+        args = parser.parse_args()
+
+        self.cell_size = 0.3 if not args.cell else args.cell
+
+
+
 
 
 def get_robots_state_to_send(robots_bodies, solution_paths, corners):
@@ -47,12 +59,20 @@ def get_robots_state_to_send(robots_bodies, solution_paths, corners):
 
 def main():
 
+    # Parse command-line arguments
+    # cell_size, scenario_file_name, map_file_name, solution_file_name, solver
+    # height, width
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--cell", type=float, help="Sets a grid cell size (in meters), default is 0.3")
+    args = parser.parse_args()
+
     # Create listener to get data from Motive
     listener = Listener(ListenerType.Local)
 
 ########################################
     # Mockup listener for offline tests
-    # listener = mockup.simple_listener_mock
+    listener = mockup.simple_listener_mock
     # comment out to run online with Motive listener
 ########################################
 
