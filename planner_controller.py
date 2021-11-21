@@ -1,23 +1,33 @@
 import time
 
 from threading import Thread
-from Grid import Grid
+from Grid import Grid, DATA_PATH
 from natnet.protocol import MarkerSetType
 
 
 class PlannerController(Thread):
 
-    def __init__(self, listener, broadcast_cond, cell_size=0.3, plan_filename='data/algorithm_output'):
+    def __init__(self, arguments_parser, listener, broadcast_cond):
         super(PlannerController, self).__init__()
 
         self.listener = listener
-        self.cell_size = cell_size
+
+        self.algorithm_output = DATA_PATH + 'algorithm_output'
+        self.scene_name = arguments_parser.scene.split('.')[0]
+        self.paths_filename = DATA_PATH + self.scene_name + '_paths.txt'
+        self.arguments_parser = arguments_parser
 
         # TODO: allow more argument to build the grid
         # TODO: find out how to get the distance between corners (from motive data) and pass it as x_dim and y_dim
         #  to create a grid with the exact size as the arena.
         #  later need to remove "restrict_arena" and fix coordinates translation everywhere
-        self.grid = Grid(broadcast_cond=broadcast_cond, cell_size=self.cell_size, plan_filename=plan_filename)
+        self.grid = Grid(broadcast_cond=broadcast_cond,
+                         cell_size=self.arguments_parser.cell_size,
+                         map_filename=self.arguments_parser.map,
+                         scene_filename=self.arguments_parser.scene,
+                         goal_locations=self.arguments_parser.goals,
+                         algorithm_output=self.algorithm_output,
+                         paths_filename=self.paths_filename)
 
     def get_adjusted_markers_positions(self, marker_set):
         """

@@ -7,21 +7,11 @@ import mockup
 
 from threading import Condition
 
+from arguments_parser import ArgumentsParser
 from natnet.protocol import MarkerSetType
 from udp_server import UDPServer
 from Listener import Listener, ListenerType
 from planner_controller import PlannerController
-
-class ArgumentsParser:
-    def __init__(self, parser):
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-c", "--cell", type=float, help="Sets a grid cell size (in meters), default is 0.3")
-        args = parser.parse_args()
-
-        self.cell_size = 0.3 if not args.cell else args.cell
-
-
-
 
 
 def get_robots_state_to_send(robots_bodies, solution_paths, corners):
@@ -58,23 +48,23 @@ def get_robots_state_to_send(robots_bodies, solution_paths, corners):
 
 
 def main():
-
+    # TODO: define and describe demo behavior (for easy run)
     # Parse command-line arguments
-    # cell_size, scenario_file_name, map_file_name, solution_file_name, solver
-    # height, width
-
+    # cell size, goal locations, solver, height, width
+    # NOTE: currently, it is not possible to specify a complete scenario or map, and the actual scenario is
+    # being generated automatically according to Motive data.
+    # It is only possible to specify a pre-defined goal locations.
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--cell", type=float, help="Sets a grid cell size (in meters), default is 0.3")
-    args = parser.parse_args()
+    ap = ArgumentsParser(parser)
 
     # Create listener to get data from Motive
     listener = Listener(ListenerType.Local)
 
-########################################
+    ########################################
     # Mockup listener for offline tests
     listener = mockup.simple_listener_mock
     # comment out to run online with Motive listener
-########################################
+    ########################################
 
     # start the listener
     listener.start()
@@ -85,7 +75,8 @@ def main():
     broadcast_solution_cond = Condition()
 
     # initialize a planner: sets up grid object, draws the arena and allows to run solution planning
-    planner_controller = PlannerController(listener=listener, broadcast_cond=broadcast_solution_cond)
+    planner_controller = PlannerController(arguments_parser=ap, listener=listener,
+                                           broadcast_cond=broadcast_solution_cond)
     planner_controller.start()
 
     # if the user presses "Broadcast solution data" button then the program will continue,

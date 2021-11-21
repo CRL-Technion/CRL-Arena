@@ -14,6 +14,10 @@ from matplotlib.colors import ListedColormap
 from matplotlib.widgets import Button
 from shapely.geometry import LineString
 
+DATA_PATH = "data/"  # TODO: move to shared "util" files for global variables or make a class variable
+UBUNTU_DIR = "crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"
+# TODO: move to shared "util" files for global variables or make a class variable
+
 
 class CellVal(Enum):
     """
@@ -44,14 +48,13 @@ class Grid:
     A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file.
     """
     def __init__(self, broadcast_cond,
-                 x_dim:int=10, y_dim:int=6,
-                 cell_size:float=1.0,
-                 map_filename:str='data/map.map',
-                 scen_filename:str= 'data/scenario.scen',
-                 end_locations_filename:str = 'data/end_locations.txt',
-                 paths_filename:str = 'data/paths.txt',
-                 plan_filename:str='data/plan.txt',
-                 ubuntu_dir:str="crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"
+                 cell_size,
+                 map_filename,
+                 scene_filename,
+                 goal_locations,
+                 paths_filename,
+                 algorithm_output,
+                 x_dim: int = 10, y_dim: int = 6,
                  ):
         """
         x_dim: in meters, size of overall arena; maximum 12
@@ -96,13 +99,12 @@ class Grid:
 
         # variables related to exporting map and scene files and path file
         self.mapfile = map_filename
-        self.scenfile = scen_filename
+        self.scenfile = scene_filename
         self.pathsfile = paths_filename
-        self.planfile = plan_filename
-        self.end_locations_file = end_locations_filename
+        self.algorithm_output = algorithm_output
+        self.end_locations_file = goal_locations
         self.endspots = []
         self.has_paths = False
-        self.ubuntu_host_dir = ubuntu_dir
 
         # association of robots with their ID
         self.bots = {}  # maps bot IDs to current spot
@@ -520,7 +522,7 @@ class Grid:
         self.has_paths = True
         self.paths_to_plan()
         if self.SEND_SOLUTION:
-            os.system(f'pscp -pw qawsedrf {self.planfile} {self.ubuntu_host_dir}')
+            os.system(f'pscp -pw qawsedrf {self.algorithm_output} {UBUNTU_DIR}')
 
     def __make_map(self):
         f = open(self.mapfile, "w")
@@ -644,7 +646,7 @@ class Grid:
         TODO: not sure it belongs to 'Grid' class, consider moving to some general 'utility' class
         """
         paths_file = open(self.pathsfile, "r")
-        plan_file = open(self.planfile, "w")
+        plan_file = open(self.algorithm_output, "w")
 
         plan_file.write("schedule:\n")
         all_robots_starts_at_zero_zero = True
