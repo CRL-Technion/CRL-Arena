@@ -1,6 +1,7 @@
+import os
 import time
 
-from threading import Thread
+from threading import Thread, Condition
 from Grid import Grid, DATA_PATH
 from natnet.protocol import MarkerSetType
 
@@ -64,7 +65,64 @@ class PlannerController(Thread):
 
             time.sleep(1)
 
+            # if 'run planner' button is clicked, then running the planner one time
+            if self.grid.run_planner_cond:
+                self.run_planner()
+                self.grid.run_planner_cond = False
+
             self.grid.plot_render()
 
+    def run_planner(self):
+        print("Planner Called")
+        os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.arguments_parser.map} -a {self.arguments_parser.scene} -o test.csv '
+                  f'--outputPaths={self.paths_filename} -k {len(self.grid.bots)} -t 60')
+        print("planner finished")
+        self.grid.has_paths = True
+        self.paths_to_plan()
+        # if self.SEND_SOLUTION:
+        #     os.system(f'pscp -pw qawsedrf {self.algorithm_output} {UBUNTU_DIR}')
+
+    def paths_to_plan(self):
+        """
+        Converts the output of the CBS planner to the input of Hadar's ROS code and saves it in a file by the name of
+        self.algorithm_output, to send to ubuntu computer
+        """
+        paths_file = open(self.paths_filename, "r")
+        plan_file = open(self.algorithm_output, "w")
+
+        plan_file.write("schedule:\n")
+        all_robots_starts_at_zero_zero = True
+
+        for line in paths_file:
+            # get and write agent number
+            space_idx = line.index(" ")
+            colon_idx = line.index(":")
+            id = line[space_idx:colon_idx]
+            plan_file.write("\tagent" + id.replace(" ", "") + ":\n")
+
+            # get sequence of coordinates
+            path_string = line[colon_idx + 2::]
+            path_list = path_string.split('->')
+
+            # parse and write out coordinates
+            start_location = []
+            counter = 0
+            for coord in path_list:
+                if coord == '\n' or coord == '':
+                    continue
+                else:
+                    coord = coord[1:-1]
+                    # this is to compensate for the flipped coordinates that the planner outputs
+                    y, x = coord.split(',')
+
+                    if all_robots_starts_at_zero_zero:
+                        if not start_location:
+                            start_location = [x, y]
+                        x = str(int(x) - int(start_location[0]))
+                        y = str(-(int(y) - int(start_location[1])))
+                    plan_file.write('\t\t- x: ' + x + '\n\t\t y: ' + y + '\n\t\t t: ' + str(counter) + '\n')
+                    counter = counter + 1
+        plan_file.close()
+        return self.paths_filename
 
 
