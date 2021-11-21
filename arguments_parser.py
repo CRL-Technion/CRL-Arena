@@ -6,25 +6,23 @@ class ArgumentsParser:
         parser.add_argument("-w", "--width", type=float, help="")  # TODO: complete
 
         # scenario args
-        parser.add_argument("-g", "--goals", help="Goals location file name for loading a defined scenario."
-                                                  " If not specified, goal locations are being "
-                                                  "generated randomly and saved under a new file with the "
-                                                  "same name. If not specified, default is 'map.map'")
-        parser.add_argument("-m", "--map", help="A name for the map (.map) file that is generated for the given run.")
-        parser.add_argument("-s", "--scene", help="A name for the scenario (.scene) file that is generated for the "
-                                                     "given run. If not specified, default is 'scene.scene'")
+        parser.add_argument("-g", "--goals", help="Goals location file name for loading defined goals.")
+        parser.add_argument("-m", "--map", help="A name for the map (.map) file that is generated for the given run."
+                                                "If not specified, default is 'map.map'")
+        parser.add_argument("-s", "--scene", help="A name for the scenario (.scen) file that is generated for the "
+                                                  "given run. If not specified, default is 'scene.scen'")
 
         # solver args
         parser.add_argument("-S", "--solver", help="A complete command for executing the MAPF solver, "
-                                                  "default behavior is to run a vanilla CBS solver")
+                                                   "default behavior is to run a vanilla CBS solver")
 
         args = parser.parse_args()
 
         self.cell_size = 0.3 if not args.cell else args.cell
-        #self.height = 0.3 if not args.height else args.height
-        #self.width = 0.3 if not args.width else args.width
+        # self.height = 0.3 if not args.height else args.height
+        # self.width = 0.3 if not args.width else args.width
 
-        self.goals = "random" if not args.goals else args.goals
+        self.goals = "" if not args.goals else args.goals
         self.map = "map.map" if not args.map else args.map
-        self.scene = "scene.scene" if not args.scene else args.scene
+        self.scene = "scene.scen" if not args.scene else args.scene
         self.solver = "default" if not args.solver else args.solver

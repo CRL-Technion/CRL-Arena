@@ -1,32 +1,35 @@
 import os
 import time
 
-from threading import Thread, Condition
-from Grid import Grid, DATA_PATH
+from threading import Thread
+from Grid import Grid
 from natnet.protocol import MarkerSetType
+
+DATA_PATH = "data/"  # TODO: move to shared "util" files for global variables or make a class variable
+UBUNTU_DIR = "crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"
+# TODO: move to shared "util" files for global variables or make a class variable
 
 
 class PlannerController(Thread):
-
     def __init__(self, arguments_parser, listener, broadcast_cond):
         super(PlannerController, self).__init__()
 
         self.listener = listener
 
-        self.algorithm_output = DATA_PATH + 'algorithm_output'
-        self.scene_name = arguments_parser.scene.split('.')[0]
+        self.algorithm_output = DATA_PATH + 'algorithm_output.txt'
+        self.scene_name = arguments_parser.scene.split('.')[0]  # clean scenario name without .scen suffix
         self.paths_filename = DATA_PATH + self.scene_name + '_paths.txt'
         self.arguments_parser = arguments_parser
+        self.SEND_SOLUTION = False
 
-        # TODO: allow more argument to build the grid
         # TODO: find out how to get the distance between corners (from motive data) and pass it as x_dim and y_dim
         #  to create a grid with the exact size as the arena.
         #  later need to remove "restrict_arena" and fix coordinates translation everywhere
         self.grid = Grid(broadcast_cond=broadcast_cond,
                          cell_size=self.arguments_parser.cell_size,
-                         map_filename=self.arguments_parser.map,
-                         scene_filename=self.arguments_parser.scene,
-                         goal_locations=self.arguments_parser.goals,
+                         map_filename=DATA_PATH + self.arguments_parser.map,
+                         scene_filename=DATA_PATH + self.arguments_parser.scene,
+                         goal_locations=DATA_PATH + self.arguments_parser.goals,
                          algorithm_output=self.algorithm_output,
                          paths_filename=self.paths_filename)
 
@@ -70,22 +73,28 @@ class PlannerController(Thread):
                 self.run_planner()
                 self.grid.run_planner_cond = False
 
+            # drawing the grid with the updated data
             self.grid.plot_render()
 
     def run_planner(self):
+        """
+        Running the MAPF planner and sending the solution to ubuntu computer if SEND_SOLUTION flag is turned on
+        """
         print("Planner Called")
-        os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.arguments_parser.map} -a {self.arguments_parser.scene} -o test.csv '
-                  f'--outputPaths={self.paths_filename} -k {len(self.grid.bots)} -t 60')
-        print("planner finished")
+        os.system(f'wsl ~/CBSH2-RTC/cbs -m {DATA_PATH + self.arguments_parser.map} '
+                  f'-a {DATA_PATH + self.arguments_parser.scene} -o test.csv --outputPaths={self.paths_filename} '
+                  f'-k {len(self.grid.bots)} -t 60')
+        print("Planner finished!")
         self.grid.has_paths = True
         self.paths_to_plan()
-        # if self.SEND_SOLUTION:
-        #     os.system(f'pscp -pw qawsedrf {self.algorithm_output} {UBUNTU_DIR}')
+        if self.SEND_SOLUTION:
+            os.system(f'pscp -pw qawsedrf {self.algorithm_output} {UBUNTU_DIR}')
 
     def paths_to_plan(self):
         """
         Converts the output of the CBS planner to the input of Hadar's ROS code and saves it in a file by the name of
-        self.algorithm_output, to send to ubuntu computer
+        self.algorithm_output, to send to ubuntu computer (no other need for this file since the formatted solution is
+        saved in _paths.txt file
         """
         paths_file = open(self.paths_filename, "r")
         plan_file = open(self.algorithm_output, "w")
@@ -97,8 +106,8 @@ class PlannerController(Thread):
             # get and write agent number
             space_idx = line.index(" ")
             colon_idx = line.index(":")
-            id = line[space_idx:colon_idx]
-            plan_file.write("\tagent" + id.replace(" ", "") + ":\n")
+            agent_id = line[space_idx:colon_idx].replace(" ", "")
+            plan_file.write("\tagent" + agent_id + ":\n")
 
             # get sequence of coordinates
             path_string = line[colon_idx + 2::]
@@ -123,6 +132,4 @@ class PlannerController(Thread):
                     plan_file.write('\t\t- x: ' + x + '\n\t\t y: ' + y + '\n\t\t t: ' + str(counter) + '\n')
                     counter = counter + 1
         plan_file.close()
-        return self.paths_filename
-
-
+        paths_file.close()

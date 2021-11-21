@@ -1,10 +1,7 @@
-import sys
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import astar
-import os
 import random
 import itertools
 
@@ -13,10 +10,6 @@ from statistics import mode
 from matplotlib.colors import ListedColormap
 from matplotlib.widgets import Button
 from shapely.geometry import LineString
-
-DATA_PATH = "data/"  # TODO: move to shared "util" files for global variables or make a class variable
-UBUNTU_DIR = "crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent"
-# TODO: move to shared "util" files for global variables or make a class variable
 
 
 class CellVal(Enum):
@@ -117,7 +110,6 @@ class Grid:
 
         # saves path after running the solver
         self.solution_paths_translated = {}
-        self.SEND_SOLUTION = False
 
     def reset_grid(self):
         """
@@ -366,44 +358,66 @@ class Grid:
 
     def init_from_scene(self, event=None):
         """
-        Takes an existing .scen file and loads goal locations from it.
+        Takes an existing .scen file and loads ONLY goal locations from it.
+        Note that it does not load the start locations and map, and won't create a new .scen and .map files.
         TODO: test and verify it's working correctly
+        TODO: check validity of input (number of agents, file format) otherwise report and abort
         """
-        scen_file = open(self.scenfile, 'r')
-        for line in scen_file:
-            if line[0] == 'v':
-                continue
-            data = line.split('\t')
-            if int(data[0]) in self.bots:
-                self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
+        if self.scenfile != "scene.scen":
+            # a scene file was given to the program
+            try:
+                with open(self.scenfile, 'r') as scen_file:
+                    print("Loading (ONLY) goal locations from .scen file.")
+                    print("Note that new .scen and .map files would not be generated.")
+                    for line in scen_file:
+                        if line[0] == 'v':
+                            continue
+                        data = line.split('\t')
+                        if int(data[0]) in self.bots:
+                            self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
+            except IOError as e:
+                print(f"Couldn't open file {e}.")
+        else:
+            # no valid .scen was given to the program
+            print("No valid .scen was given to the program! \n"
+                  "Use random goal locations generation or provide a valid .scen file at command line args.")
 
     def init_from_file(self, event=None):
         """
-        Takes an existing .txt file and initializes goal locations from it (user's choice), also creates a new .scen file
-        TODO: test and verify it's working correctly. Also, what is the difference from "init_from_scene'?
+        Takes an existing .txt file with specified goal locations and initializes a scenario.
+        Note that a new .scen and .map files will be created.
+        TODO: test and verify it's working correctly
+        TODO: check validity of input (number of agents, file format) otherwise report and abort
         """
-        txt_file = open(self.end_locations_file, 'r')
-        for line in txt_file:
-            data = line.split('   ')  # python doesn't recognize tab characters for some reason
-            print("data: ", data)
-            if int(data[0]) in self.bots:
-                print('recognized robot', data[0])
-                if (self.grid[int(data[2])][int(data[1])] != 0):  # if the spot isn't available
-                    print("not available")
-                    continue
-                if (int(data[1]) >= self.x_range[1] or int(data[1]) <= self.x_range[0] or
-                        int(data[2]) >= self.y_range[1] or int(data[2]) <= self.y_range[0]):
-                    # if the cell is out of bounds
-                    print("space requested is out of bounds")
-                    continue
-                print("coordinates for robot ", data[0], "will be ", int(data[2]), int(data[1]))
-                self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
-        if len(self.end_bots) > 0:
-            self.make_scen(from_scratch=False)
-            print("scene made")
+        if self.end_locations_file != "":
+            # a valid goals file was given
+            with open(self.end_locations_file, 'r') as txt_file:
+                print("Loading goal locations from file and generating new scenario (.scen and .map files).")
+                for line in txt_file:
+                    data = line.split('   ')  # python doesn't recognize tab characters for some reason
+                    print("data: ", data)
+                    if int(data[0]) in self.bots:
+                        print('recognized robot', data[0])
+                        if (self.grid[int(data[2])][int(data[1])] != 0):  # if the spot isn't available
+                            print("not available")
+                            continue
+                        if (int(data[1]) >= self.x_range[1] or int(data[1]) <= self.x_range[0] or
+                                int(data[2]) >= self.y_range[1] or int(data[2]) <= self.y_range[0]):
+                            # if the cell is out of bounds
+                            print("location requested is out of bounds")
+                            continue
+                        print("coordinates for robot ", data[0], "will be ", int(data[2]), int(data[1]))
+                        self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
+            if len(self.end_bots) > 0:
+                self.make_scen(from_scratch=False)
+                print("Scene generated")
+            else:
+                print("ERROR: Scenario file could not be generated because end locations were not found "
+                      "or out of bounds.")
         else:
-            print("ERROR: Scenario file could not be generated because end locations were not found or out of bounds.")
-        txt_file.close()
+            # no valid goals file was given to the program
+            print("No valid goals file was given to the program! \n"
+                  "Use random goal locations generation or provide a valid goals file at command line args.")
 
     def broadcast_solution(self, event=None):
         """
@@ -485,24 +499,31 @@ class Grid:
                 self.end_boxes.append(newtxt)
 
         # TODO: check the warning about opening multiple axes objects
-        ax_planner = plt.axes([0.46, -0.01, 0.1, 0.075])
-        ax_from_scen = plt.axes([0.58, -0.01, 0.1, 0.075])
-        ax_make_scen = plt.axes([0.7, -0.01, 0.1, 0.075])
-        ax_end_locs = plt.axes([0.35, -0.01, 0.1, 0.075])
+        ax_make_scen = plt.axes([0.8, -0.01, 0.1, 0.075])
+        ax_from_scen = plt.axes([0.65, -0.01, 0.1, 0.075])
+        ax_end_locs = plt.axes([0.5, -0.01, 0.1, 0.075])
+        ax_planner = plt.axes([0.35, -0.01, 0.1, 0.075])
         ax_udp = plt.axes([0.2, -0.01, 0.1, 0.075])
-        button_scenario = Button(ax_make_scen, 'Make .SCEN')
-        button_scenario.label.set_fontsize(5)
+
+        button_scenario = Button(ax_make_scen, 'Make Random Scene')
+        button_scenario.label.set_fontsize(4)
         button_scenario.on_clicked(self.make_scen)
-        button_from_scen = Button(ax_from_scen, 'Load from .SCEN')
+
+        # to load goal location from a pre-generated scene
+        button_from_scen = Button(ax_from_scen, 'Load Goals from Scene')
         button_from_scen.on_clicked(self.init_from_scene)
         button_from_scen.label.set_fontsize(5)
-        button_planner = Button(ax_planner, 'Run Planner')
-        button_planner.on_clicked(self.run_planner)
-        button_planner.label.set_fontsize(6)
-        button_end_locs = Button(ax_end_locs, 'Choose End Locs')
+
+        # to load goal locations from a pre-defined dedicated goals file
+        button_end_locs = Button(ax_end_locs, 'Load Goals from File')
         button_end_locs.on_clicked(self.init_from_file)
         button_end_locs.label.set_fontsize(5)
-        button_udp = Button(ax_udp, 'Broadcast solution \n data')
+
+        button_planner = Button(ax_planner, 'Run Planner')
+        button_planner.on_clicked(self.run_planner)
+        button_planner.label.set_fontsize(5)
+
+        button_udp = Button(ax_udp, 'Broadcast Solution \n and Data')
         button_udp.on_clicked(self.broadcast_solution)
         button_udp.label.set_fontsize(5)
 
