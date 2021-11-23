@@ -17,3 +17,7 @@ __pycache__/
 *$py.class
 *.pyc
 *.cache
+
+
+data/
+test.csv

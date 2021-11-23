@@ -16,13 +16,13 @@ class PlannerController(Thread):
 
         self.listener = listener
 
-        self.algorithm_output = DATA_PATH + 'algorithm_output.txt'
-        self.scenario_data = DATA_PATH + 'scenario_data.txt'
+        self.algorithm_output = DATA_PATH + 'algorithm_output'
+        self.scenario_data = DATA_PATH + 'scenario_data'
         self.scene_name = arguments_parser.scene.split('.')[0]  # clean scenario name without .scen suffix
         self.paths_filename = DATA_PATH + self.scene_name + '_paths.txt'
         self.arguments_parser = arguments_parser
-        self.robots = []  # later is filled with motive data
-        self.SEND_SOLUTION = False
+        # self.robots = []  # later is filled with motive data
+        self.SEND_SOLUTION = True
 
         # TODO: find out how to get the distance between corners (from motive data) and pass it as x_dim and y_dim
         #  to create a grid with the exact size as the arena.
@@ -61,13 +61,11 @@ class PlannerController(Thread):
             obstacles = [ms for ms in marker_sets if ms.type == MarkerSetType.Obstacle]
 
             # (robot_id, MarkersSet)
-            self.robots = \
-                [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
-
+            robots = [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
             self.grid.reset_grid()  # TODO: understand how to re-draw (update) without resetting every time
             self.grid.process_corners(corners)  # TODO: only if corners changed
             self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
-            self.grid.add_robots(self.robots, tolerance=0)  # TODO: only if robots moved
+            self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
 
             time.sleep(1)
 
@@ -99,10 +97,12 @@ class PlannerController(Thread):
                 # prepare scenario data file to be used for automatically running the robots from ubuntu computer.
                 # add here additional data required in pre-defined format
                 # (need to follow the conventions so it could be parsed).
+                robots_ids = [body.body_id for body in self.listener.bodies if int(body.body_id) // 100 == 1]
+                robots_ids.sort()
                 scenario_data_file.write(f"robots:{self.arguments_parser.cell_size}")  # format: "robots:<id>,<id>..."
-                robots_ids = list(map(lambda pair: pair[0], self.robots))
                 for rid in robots_ids:
-                    scenario_data_file.write(str(rid))
+                    scenario_data_file.write(f"{rid},")
+                scenario_data_file.write("\n")
                 scenario_data_file.write(f"cell_size:{self.arguments_parser.cell_size}")  # format: "cell_size:<cell_size>"
             os.system(f'pscp -pw qawsedrf {self.scenario_data} {UBUNTU_DIR}')  # send scenario peripheral data
 
