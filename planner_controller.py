@@ -99,7 +99,7 @@ class PlannerController(Thread):
                 # (need to follow the conventions so it could be parsed).
                 robots_ids = [body.body_id for body in self.listener.bodies if int(body.body_id) // 100 == 1]
                 robots_ids.sort()
-                scenario_data_file.write(f"robots:{self.arguments_parser.cell_size}")  # format: "robots:<id>,<id>..."
+                scenario_data_file.write(f"robots:")  # format: "robots:<id>,<id>..."
                 for rid in robots_ids:
                     scenario_data_file.write(f"{rid},")
                 scenario_data_file.write("\n")

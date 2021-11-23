@@ -42,8 +42,8 @@ def get_robots_state_to_send(robots_bodies, solution_paths, corners):
         to_send.append(body_dict)
 
     sorted_tosend = sorted(to_send, key=lambda k: k['body_id'])
-    sorted_tosend.append(solution_paths)
-    sorted_tosend.append(corners)
+    #sorted_tosend.append(solution_paths)
+    #sorted_tosend.append(corners)
     return sorted_tosend
 
 
