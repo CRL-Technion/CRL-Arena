@@ -101,7 +101,7 @@ class Grid:
         self.has_paths = False
 
         # association of robots with their ID
-        self.bots = {}  # maps bot IDs to current spot
+        self.bots = {}  # maps bot IDs to current spot, NOTE that locations are saved as (y,x)
         self.end_bots = {}  # maps bot ID's to end spot (if one exists)
         self.bad_bots = []  # simple list of all robots that aren't completely on one cell
         self.out_of_bounds_bots = []  # simple list of all robots that aren't completely within the bounds of the arena
@@ -615,7 +615,9 @@ class Grid:
                 self.end_bots[key] = [y, x]
             f.write(str(x) + '\t' + str(y) + '\t')
             # optimal distance to goal
-            f.write(f'{self.get_optimal_length((value[1], value[0]), (y, x))}\n')
+            # NOTE!!! we don't need to switch start location x and y
+            # because it is already saved in self.bots as required (y,x)
+            f.write(f'{self.get_optimal_length((value[0], value[1]), (y, x))}\n')
         f.close()
         self.has_paths = False
         print("Scenario file generated (.scen file)")
@@ -642,10 +644,11 @@ class Grid:
         Returns the shortest distance between two location on the grid using A* algorithm.
         """
         # TODO: need to debug this call and verify that it's not crashing from time to time
-        path = list(astar.find_path(loc1, loc2,
-                                    neighbors_fnct=lambda loc: self.neighbors(loc, diagonal_moves=False),
-                                    heuristic_cost_estimate_fnct=self.heuristic,
-                                    distance_between_fnct=self.distance))
+        res = astar.find_path(loc1, loc2,
+                              neighbors_fnct=lambda loc: self.neighbors(loc, diagonal_moves=False),
+                              heuristic_cost_estimate_fnct=self.heuristic,
+                              distance_between_fnct=self.distance)
+        path = list(res)
         # calculate path's total distance
         dist = 0
         prev = path[0]
