@@ -35,16 +35,6 @@ class PlannerController(Thread):
                          algorithm_output=self.algorithm_output,
                          paths_filename=self.paths_filename)
 
-    def get_adjusted_markers_positions(self, marker_set):
-        """
-        Saves markers from listeners with 4 digits after decimal point
-        """
-        for i in range(len(marker_set.positions)):
-            marker_set.positions[i].x = float("{:.4f}".format(marker_set.positions[i].x))
-            marker_set.positions[i].y = float("{:.4f}".format(marker_set.positions[i].y))
-            marker_set.positions[i].z = float("{:.4f}".format(marker_set.positions[i].z))
-        return marker_set
-
     def run(self):
         # draw the base empty grid
         #self.grid.plot_init_heatmap()
@@ -149,3 +139,13 @@ class PlannerController(Thread):
                     counter = counter + 1
         plan_file.close()
         paths_file.close()
+
+    def get_adjusted_markers_positions(self, marker_set):
+        """
+        Saves markers from listeners with 4 digits after decimal point
+        """
+        for i in range(len(marker_set.positions)):
+            marker_set.positions[i].x = float("{:.4f}".format(marker_set.positions[i].x))
+            marker_set.positions[i].y = float("{:.4f}".format(marker_set.positions[i].y))
+            marker_set.positions[i].z = float("{:.4f}".format(marker_set.positions[i].z))
+        return marker_set
