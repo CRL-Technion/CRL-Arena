@@ -345,7 +345,7 @@ class Grid:
 
     def plot_init_heatmap(self):
         """
-        Initializes a heatmap to be used to display the plot; should be called before plot_render()
+        Initializes a heatmap to be used to display the plot; should be called before plot_render().
         """
         self.fig, self.ax = plt.subplots(1, 1)
         # bounds = range(self.cMap.N)
@@ -408,7 +408,7 @@ class Grid:
                             continue
                         print("coordinates for robot ", data[0], "will be ", int(data[2]), int(data[1]))
                         self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
-            if len(self.end_bots) > 0:
+            if len(self.end_bots) > 0:  # TODO: check this part is actually working correctly
                 self.make_scen(from_scratch=False)
                 print("Scene generated")
             else:
@@ -538,77 +538,99 @@ class Grid:
 
     # TODO: add descriptions and clean from here
     def run_planner(self, event=None):
+        """
+        Turns on the flag that tells the PlannerController loop to run the planner.
+        TODO: not the ideal way to notify on async event from a different class,
+                maybe try to modify if we find a different way.
+        """
         self.run_planner_cond = True
 
     def __make_map(self):
-        f = open(self.mapfile, "w")
-        f.write("type octile\n")
-        f.write("height " + str(self.rows) + '\n')
-        f.write("width " + str(self.cols) + '\n')
-        f.write("map\n")
-        for i in range(int(self.rows)):
-            for j in range(int(self.cols)):
-                if self.grid[i][j] == CellVal.OBSTACLE_ART.value or self.grid[i][j] == CellVal.OBSTACLE_REAL.value:
-                    f.write('@')
-                else:
-                    f.write('.')
-            f.write('\n')
-        f.close()
+        """
+        Generates a .map file of the projected scenario according to the map file conventions.
+        Currently, we follow the conventions required to run the common benchmarks MAPF kit.
+        """
+        with open(self.mapfile, "w") as f:
+            # required headers
+            f.write("type octile\n")
+            f.write("height " + str(self.rows) + '\n')
+            f.write("width " + str(self.cols) + '\n')
+            f.write("map\n")
+
+            # write the map to file row-by-row
+            for i in range(int(self.rows)):
+                for j in range(int(self.cols)):
+                    if self.grid[i][j] == CellVal.OBSTACLE_ART.value or self.grid[i][j] == CellVal.OBSTACLE_REAL.value:
+                        f.write('@')  # blocked cell
+                    else:
+                        f.write('.')  # free cell
+                f.write('\n')
 
     def make_scen(self, from_scratch=True, event=None):
+        """
+        Generates a .scen file of the projected scenario according to the scenario file conventions.
+        Currently, we follow the conventions required to run the common benchmarks MAPF kit.
+
+        - from_scratch - specifies that a new random end locations are required
+        TODO: check that this is actually what from_scratch does and that it works
+            (also when trying to get pre-defined end locations and from_scratch is False)
+        """
+
         self.__make_map()
-        print(".map file generated")
-        #first, warn the user that the scene file is incomplete if there are robots that aren't in cells
+        print("Map file generated (.map file)")
+
+        # first, warn the user that the scene file is incomplete if there are robots that aren't in cells
         if len(self.bad_bots) > 0:
-            print("Robots with the following ID's are not aligned with a single cell and won't be included in the .SCEN file: ", self.bad_bots)
-        # for each ROBOT on the grid (meaning its grid value is 1), make a line with all its info
+            print("Robots with the following ID's are not aligned with a single cell "
+                  "and won't be included in the scenario file: ", self.bad_bots)
+
+        # for each ROBOT on the grid (meaning its grid value is 1), add a line to the scenario file with all its info
         f = open(self.scenfile, "w")
-        f.write("version 1\n")
-        count = 0
-        # self.end_bots = {} #this resets every time this is the problem
+        f.write("version 1\n")  # scenario file convention
+
+        # this is relevant only if we changed the arena after already generating goal locations
         for key, value in self.end_bots.items():
             if key not in self.bots:
                 self.end_bots.pop(key)
+
         items = sorted(self.bots.items())
-        print(items)
         for key, value in items:
-            count+=1
             # bucket
             f.write(str(key)+'\t')
             # .map file name
             f.write(str(self.mapfile) + '\t')
             # dimensions of the grid
             f.write(str(int(self.rows)) + '\t' + str(int(self.cols)) + '\t')
-            # starting position
+            # start location
             f.write(str(value[1]) + '\t' + str(value[0]) + '\t')
-            # ending position
-            if (from_scratch == False) and key in self.end_bots: #if there is already a prepared end location in the dictionary waiting for use
-                print("will pull from end bots for: ", key)
+            # goal location
+            # if there is already a prepared goal location in the dictionary waiting for use
+            if (from_scratch == False) and key in self.end_bots:
+                print("will pull goal location from already existing goal locations set for robot ", key)
                 x, y = self.end_bots[key][1], self.end_bots[key][0]
             else:
-                print("Generating Random Spot for robot ", key)
+                print("Generating random goal location for robot ", key)
                 x, y = self.get_empty_spot()
                 self.end_bots[key] = [y, x]
                 self.end_bots[key] = [y, x]
             f.write(str(x) + '\t' + str(y) + '\t')
-            # optimal distance
-            print("value: ", value)
-            print("x_range: ", self.x_range)
-            print("y_range: ", self.y_range)
-            print("y x", y, " ", x)
-            # f.write(f'{self.get_optimal_length((value[1], value[0]), (0, 0))}\n')
+            # optimal distance to goal
             f.write(f'{self.get_optimal_length((value[1], value[0]), (y, x))}\n')
         f.close()
         self.has_paths = False
-        print(".scen file generated")
+        print("Scenario file generated (.scen file)")
 
     def get_empty_spot(self):
-        while True: #choose within borders of arena, not the 12x12
+        """
+        Returns a random empty cell on the grid.
+        Also checks that it has not been generated before.
+        """
+        while True:  # choose within borders of arena, not the 12x12 TODO: modify after removing borders
             try_x = random.randint(self.x_range[0], self.x_range[1])
             try_y = random.randint(self.y_range[0], self.y_range[1])
             if self.grid[try_y][try_x] != 0:
                 continue
-            for coord in self.endspots: # now need to make sure no two ending spots align
+            for coord in self.endspots:  # make sure no two goal locations are aligned
                 if coord[1] == try_x and coord[0] == try_y:
                     continue
             break
@@ -616,9 +638,15 @@ class Grid:
         return try_x, try_y
 
     def get_optimal_length(self, loc1, loc2):
-        # path = list(astar.find_path(loc1, loc2, neighbors_fnct=lambda loc: self.neighbors(loc, True), heuristic_cost_estimate_fnct=self.heuristic, distance_between_fnct=self.distance))
-        #should be the line above, but sometimes causes issues; line below is a band-aid solution only!
-        path = list(astar.find_path((4,7), (6, 8), neighbors_fnct=lambda loc: self.neighbors(loc, True), heuristic_cost_estimate_fnct=self.heuristic, distance_between_fnct=self.distance))
+        """
+        Returns the shortest distance between two location on the grid using A* algorithm.
+        """
+        # TODO: need to debug this call and verify that it's not crashing from time to time
+        path = list(astar.find_path(loc1, loc2,
+                                    neighbors_fnct=lambda loc: self.neighbors(loc, diagonal_moves=False),
+                                    heuristic_cost_estimate_fnct=self.heuristic,
+                                    distance_between_fnct=self.distance))
+        # calculate path's total distance
         dist = 0
         prev = path[0]
         for p in path[1:]:
@@ -644,15 +672,23 @@ class Grid:
         neighbors = []
         for move in moves:
             new_loc = np.array(loc) + move
-            if 0 <= new_loc[0] <= self.cols-1 and 0 <= new_loc[1] <= self.rows-1 and self.grid[new_loc[0]][new_loc[1]] == 0:
+            if 0 <= new_loc[0] <= self.cols-1 and \
+                    0 <= new_loc[1] <= self.rows-1 and \
+                    self.grid[new_loc[0]][new_loc[1]] == 0:
                 neighbors.append(tuple(new_loc))
 
         return neighbors
 
     def heuristic(self, loc, goal):
+        """
+        Currently using the Euclidean distance to the goal as heuristic
+        """
         return np.linalg.norm(np.array(loc)-np.array(goal), 2)
 
     def distance(self, loc1, loc2):
+        """
+        Euclidean distance between two locations on the grid
+        """
         return np.linalg.norm(np.array(loc1)-np.array(loc2), 2)
 
     def marker_in_bound(self, marker_cell):
