@@ -1,3 +1,5 @@
+import sys
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +12,17 @@ from statistics import mode
 from matplotlib.colors import ListedColormap
 from matplotlib.widgets import Button
 from shapely.geometry import LineString
+
+import pygame
+from pygame.locals import KEYDOWN, K_q
+
+# CONSTANTS:
+SCREENSIZE = WIDTH, HEIGHT = 800, 600
+BLACK = (0, 0, 0)
+GREY = (160, 160, 160)
+WHITE = (255, 255, 255)
+
+
 
 
 class CellVal(Enum):
@@ -61,6 +74,8 @@ class Grid:
         ubuntu_dir: name of directory in the ubuntu computer to send plan
         """
 
+
+
         self.broadcast_cond = broadcast_cond
         self.run_planner_cond = False
 
@@ -71,18 +86,30 @@ class Grid:
 
         self.cell_size = cell_size  # meters TODO: consider remove from grid after removing arena restriction
         # TODO: changed from what originally was here - validate everywhere + documentation
-        self.rows = rows  # meters
-        self.cols = cols  # meters
+        self.rows = int(rows)
+        self.cols = int(cols)
+
+        print(rows)
+        print(cols)
+        # OUR GRID MAP:
+        #self.cellMAP = np.random.randint(2, size=(self.rows, self.cols))
+
+        # VARS:
+        self._VARS = {'surf': pygame.display.set_mode(SCREENSIZE), 'gridWH': 400, 'gridScale': SCREENSIZE[0] / 2,
+                 'gridOrigin': (10, 10), 'gridCells': self.rows*self.cols, 'lineWidth': 2}
         # # rows and columns are like the larger grid, while x and y dim are the smaller arena
         # self.rows = int(12 / cell_size)
         # self.cols = int(12 / cell_size)
         # TODO: consider remove origin_cell and change xy to cell translation based on new grid
-        self.origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
+        self.grid_origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
+        print(self.grid_origin_cell)
+        self.screen_grid_origin = (10, 10)  # this is the place in the window where the top-left corner of the grid is placed
+        self.cell_dim = 30  # the dimension of a square grid cell (not depented on the actual grid cell in meters, this is just for visualization)
 
         # TODO: changed from what originally was here - validate everywhere + documentation
         # x and y ranges are aligned with the LAB's coordinates system
-        self.x_range = [- np.floor(self.rows / 2), np.ceil(self.rows / 2)]
-        self.y_range = [- np.floor(self.cols / 2), np.ceil(self.cols / 2)]
+        self.y_range = [int(- np.floor(self.rows / 2)), int(np.ceil(self.rows / 2))]
+        self.x_range = [int(- np.floor(self.cols / 2)), int(np.ceil(self.cols / 2))]
         # # x and y ranges defined below are default values (will be replaced if corner markers present)
         # self.x_range = [self.origin_cell[0] - self.x_dim / self.cell_size // 2, self.origin_cell[0] + self.x_dim / self.cell_size // 2]
         # self.y_range = [self.origin_cell[1] - self.y_dim / self.cell_size // 2, self.origin_cell[1] + self.y_dim / self.cell_size // 2]
@@ -122,6 +149,86 @@ class Grid:
 
         # saves path after running the solver
         self.solution_paths_translated = {}
+
+    # NEW METHOD FOR ADDING CELLS :
+    def placeCells(self):
+        # GET CELL DIMENSIONS...
+        cellBorder = self.cell_dim / 10
+        celldimX = celldimY = self.cell_dim - (cellBorder * 2)
+        # DOUBLE LOOP
+        for row in range(self.rows):
+            for column in range(self.cols):
+                # Is the grid cell tiled ?
+                if (self.grid[row][column] == CellVal.OBSTACLE_REAL.value):
+                    self.drawSquareCell(
+                        self.screen_grid_origin[0] + (self.cell_dim * column)
+                        + cellBorder + self._VARS['lineWidth'] / 2,
+                        self.screen_grid_origin[1] + (self.cell_dim * row) + cellBorder + self._VARS['lineWidth'] / 2,
+                        celldimX, celldimY)
+                    # self.drawSquareCell(
+                    #     self.screen_grid_origin[0] + (celldimY * row)
+                    #     + cellBorder + (2 * row * cellBorder) + self._VARS['lineWidth'] / 2,
+                    #     self.screen_grid_origin[1] + (celldimX * column)
+                    #     + cellBorder + (2 * column * cellBorder) + self._VARS['lineWidth'] / 2,
+                    #     celldimX, celldimY)
+
+    # Draw filled rectangle at coordinates
+    def drawSquareCell(self, x, y, dimX, dimY):
+        pygame.draw.rect(
+            self._VARS['surf'], BLACK,
+            (x, y, dimX, dimY)
+        )
+
+    def drawSquareGrid(self):
+
+        cont_x, cont_y = self.screen_grid_origin
+        grid_height = int(self.rows) * self.cell_dim
+        grid_width = int(self.cols) * self.cell_dim
+
+        # DRAW Grid Border:
+        # TOP lEFT TO RIGHT
+        pygame.draw.line(
+            self._VARS['surf'], BLACK,
+            (cont_x, cont_y),
+            (grid_width + cont_x, cont_y), self._VARS['lineWidth'])
+        # # BOTTOM lEFT TO RIGHT
+        pygame.draw.line(
+            self._VARS['surf'], BLACK,
+            (cont_x, grid_height + cont_y),
+            (grid_width + cont_x,
+             grid_height + cont_y), self._VARS['lineWidth'])
+        # # LEFT TOP TO BOTTOM
+        pygame.draw.line(
+            self._VARS['surf'], BLACK,
+            (cont_x, cont_y),
+            (cont_x, cont_y + grid_height), self._VARS['lineWidth'])
+        # # RIGHT TOP TO BOTTOM
+        pygame.draw.line(
+            self._VARS['surf'], BLACK,
+            (grid_width + cont_x, cont_y),
+            (grid_width + cont_x,
+             grid_height + cont_y), self._VARS['lineWidth'])
+
+        # VERTICAL DIVISIONS: (0,1,2) for grid(3) for example
+        for x in range(self.cols):
+            pygame.draw.line(
+                self._VARS['surf'], BLACK,
+                (cont_x + (self.cell_dim * x), cont_y),
+                (cont_x + (self.cell_dim * x), grid_height + cont_y), 2)
+        # HORIZONTAl DIVISIONS
+        for x in range(self.rows):
+            pygame.draw.line(
+                self._VARS['surf'], BLACK,
+                (cont_x, cont_y + (self.cell_dim * x)),
+                (cont_x + grid_width, cont_y + (self.cell_dim * x)), 2)
+
+    def checkEvents(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+            elif event.type == KEYDOWN and event.key == K_q:
+                pygame.quit()
+                sys.exit()
 
     def reset_grid(self):
         """
@@ -166,7 +273,10 @@ class Grid:
             obst_cord = self.get_positions_list(obst.positions)
             blocked_cells = self.__get_blocked_cells(obst_cord)
             for coord in blocked_cells:
-                self.grid[coord[0]][coord[1]] = CellVal.OBSTACLE_REAL.value
+                print("prev: " + str(coord))
+                new_coord = self.cell_to_grid_cell(coord)
+                print("after: " + str(new_coord))
+                self.grid[new_coord[1]][new_coord[0]] = CellVal.OBSTACLE_REAL.value
 
     def add_robots(self, robots, tolerance=1):
         """
@@ -304,7 +414,14 @@ class Grid:
         """
         x = -loc[0]
         y = -loc[1]
-        return (int(self.origin_cell[0] + np.round(x / self.cell_size)), int(self.origin_cell[1] + np.round(y / self.cell_size)))
+        return (int(self.grid_origin_cell[0] + np.round(x / self.cell_size)), int(self.grid_origin_cell[1] + np.round(y / self.cell_size)))
+
+    def cell_to_grid_cell(self, loc):
+        new_origin = (self.x_range[0], self.y_range[1])
+        print("new origin: " + str(new_origin))
+        # temp = (-loc[0]+new_origin[0], -loc[1]+new_origin[1])
+        # return -temp[0], temp[1]
+        return int(np.abs(new_origin[0] - loc[0])), int(np.abs(new_origin[1] - loc[1]))
 
     def process_corners(self, corners):
         """

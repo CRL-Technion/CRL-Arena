@@ -62,7 +62,7 @@ def main():
 
     ########################################
     # Mockup listener for offline tests
-    # listener = mockup.simple_listener_mock
+    listener = mockup.simple_listener_mock
     # comment out to run online with Motive listener
     ########################################
 

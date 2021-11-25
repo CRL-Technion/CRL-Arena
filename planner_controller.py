@@ -3,7 +3,10 @@ import time
 import numpy as np
 
 from threading import Thread
-from Grid import Grid
+
+import pygame
+
+from Grid import Grid, WHITE, GREY, BLACK, SCREENSIZE
 from natnet.protocol import MarkerSetType
 
 DATA_PATH = "data/"  # TODO: move to shared "util" files for global variables or make a class variable
@@ -29,6 +32,8 @@ class PlannerController(Thread):
         #  later need to remove "restrict_arena" and fix coordinates translation everywhere
         self.rows = np.floor(self.arguments_parser.height / self.arguments_parser.cell_size)
         self.cols = np.floor(self.arguments_parser.width / self.arguments_parser.cell_size)
+
+        pygame.init()
         self.grid = Grid(cell_size=self.arguments_parser.cell_size,
                          rows=self.rows,
                          cols=self.cols,
@@ -42,6 +47,9 @@ class PlannerController(Thread):
     def run(self):
         # draw the base empty grid
         #self.grid.plot_init_heatmap()
+
+
+
 
         # TODO: This is bad practice and exhausting the CPU. Find a different way to run until stopped, maybe use
         #  'asynio' lib or other way of event-looping (with threading, not processes)
@@ -59,9 +67,17 @@ class PlannerController(Thread):
             self.grid.reset_grid()  # TODO: understand how to re-draw (update) without resetting every time
             #self.grid.process_corners(corners)  # TODO: only if corners changed
             self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
-            self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
+            #self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
 
-            time.sleep(1)
+            #time.sleep(1)
+
+
+
+            self.grid.checkEvents()
+            self.grid._VARS['surf'].fill(WHITE)
+            self.grid.drawSquareGrid()
+            self.grid.placeCells()
+            pygame.display.update()
 
             # if 'run planner' button is clicked, then running the planner one time
             if self.grid.run_planner_cond:
@@ -69,7 +85,7 @@ class PlannerController(Thread):
                 self.grid.run_planner_cond = False
 
             # drawing the grid with the updated data
-            self.grid.plot_render()
+            #self.grid.plot_render()
 
     def run_planner(self):
         """
