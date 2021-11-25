@@ -1,5 +1,6 @@
 import os
 import time
+import numpy as np
 
 from threading import Thread
 from Grid import Grid
@@ -21,14 +22,17 @@ class PlannerController(Thread):
         self.scene_name = arguments_parser.scene.split('.')[0]  # clean scenario name without .scen suffix
         self.paths_filename = DATA_PATH + self.scene_name + '_paths.txt'
         self.arguments_parser = arguments_parser
-        # self.robots = []  # later is filled with motive data
         self.SEND_SOLUTION = True
 
         # TODO: find out how to get the distance between corners (from motive data) and pass it as x_dim and y_dim
         #  to create a grid with the exact size as the arena.
         #  later need to remove "restrict_arena" and fix coordinates translation everywhere
-        self.grid = Grid(broadcast_cond=broadcast_cond,
-                         cell_size=self.arguments_parser.cell_size,
+        self.rows = np.floor(self.arguments_parser.height / self.arguments_parser.cell_size)
+        self.cols = np.floor(self.arguments_parser.width / self.arguments_parser.cell_size)
+        self.grid = Grid(cell_size=self.arguments_parser.cell_size,
+                         rows=self.rows,
+                         cols=self.cols,
+                         broadcast_cond=broadcast_cond,
                          map_filename=DATA_PATH + self.arguments_parser.map,
                          scene_filename=DATA_PATH + self.arguments_parser.scene,
                          goal_locations=DATA_PATH + self.arguments_parser.goals,
@@ -53,7 +57,7 @@ class PlannerController(Thread):
             # (robot_id, MarkersSet)
             robots = [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
             self.grid.reset_grid()  # TODO: understand how to re-draw (update) without resetting every time
-            self.grid.process_corners(corners)  # TODO: only if corners changed
+            #self.grid.process_corners(corners)  # TODO: only if corners changed
             self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
             self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
 

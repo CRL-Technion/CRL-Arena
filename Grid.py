@@ -40,8 +40,8 @@ class Grid:
     This class is the visual representation of the arena, including robots, obstacles, and borders.
     A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file.
     """
-    def __init__(self, broadcast_cond,
-                 cell_size,
+    def __init__(self, cell_size, rows, cols,
+                 broadcast_cond,
                  map_filename,
                  scene_filename,
                  goal_locations,
@@ -69,16 +69,28 @@ class Grid:
         self.y_dim = min(y_dim, 12)  # meters
         self.corners = {}
 
-        self.cell_size = cell_size  # meters
-        # rows and columns are like the larger grid, while x and y dim are the smaller arena
-        self.rows = int(12 / cell_size)
-        self.cols = int(12 / cell_size)
+        self.cell_size = cell_size  # meters TODO: consider remove from grid after removing arena restriction
+        # TODO: changed from what originally was here - validate everywhere + documentation
+        self.rows = rows  # meters
+        self.cols = cols  # meters
+        # # rows and columns are like the larger grid, while x and y dim are the smaller arena
+        # self.rows = int(12 / cell_size)
+        # self.cols = int(12 / cell_size)
+        # TODO: consider remove origin_cell and change xy to cell translation based on new grid
         self.origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
-        # x and y ranges defined below are default values (will be replaced if corner markers present)
-        self.x_range = [self.origin_cell[0] - self.x_dim / self.cell_size // 2, self.origin_cell[0] + self.x_dim / self.cell_size // 2]
-        self.y_range = [self.origin_cell[1] - self.y_dim / self.cell_size // 2, self.origin_cell[1] + self.y_dim / self.cell_size // 2]
+
+        # TODO: changed from what originally was here - validate everywhere + documentation
+        # x and y ranges are aligned with the LAB's coordinates system
+        self.x_range = [- np.floor(self.rows / 2), np.ceil(self.rows / 2)]
+        self.y_range = [- np.floor(self.cols / 2), np.ceil(self.cols / 2)]
+        # # x and y ranges defined below are default values (will be replaced if corner markers present)
+        # self.x_range = [self.origin_cell[0] - self.x_dim / self.cell_size // 2, self.origin_cell[0] + self.x_dim / self.cell_size // 2]
+        # self.y_range = [self.origin_cell[1] - self.y_dim / self.cell_size // 2, self.origin_cell[1] + self.y_dim / self.cell_size // 2]
         # the grid itself with values
-        self.grid = []  # This is a 2D array representing the grid (!!!)
+
+        # This is a 2D array representing the grid (!!!)
+        # NOTE (!) that accessing with (y,x) to be aligned with LAB's coordinates
+        self.grid = []
         #self.reset_grid()
 
         # variables related to matplotlib visualization
@@ -350,10 +362,11 @@ class Grid:
         self.fig, self.ax = plt.subplots(1, 1)
         # bounds = range(self.cMap.N)
         # norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
+        # self.grid[0][0] = CellVal.OBSTACLE_ART.value
         data = self.grid
         self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=0.01, cmap=self.cMap, vmin=0, vmax=5)
         self.fig.canvas.draw()
-        plt.gca().invert_yaxis()
+        #plt.gca().invert_yaxis()
         self.fig.show()
 
     def init_from_scene(self, event=None):
@@ -437,7 +450,7 @@ class Grid:
         if not self.heatmap:
             self.plot_init_heatmap()
         # re-plot grid with up-to-date values; should be called after updating/adding values
-        self.restrict_arena()
+        #self.restrict_arena()
         data = self.grid
 
         # create base grid
