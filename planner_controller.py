@@ -6,7 +6,7 @@ from threading import Thread
 
 import pygame
 
-from Grid import Grid, WHITE, GREY, BLACK, SCREENSIZE
+from Grid import Grid, WHITE, GREY, BLACK, LIGHT_GREY, SCREENSIZE
 from natnet.protocol import MarkerSetType
 
 DATA_PATH = "data/"  # TODO: move to shared "util" files for global variables or make a class variable
@@ -74,7 +74,7 @@ class PlannerController(Thread):
 
 
             self.grid.checkEvents()
-            self.grid._VARS['surf'].fill(WHITE)
+            self.grid._VARS['surf'].fill(LIGHT_GREY)
             self.grid.drawSquareGrid()
             self.grid.placeCells()
             pygame.display.update()

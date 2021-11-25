@@ -20,6 +20,7 @@ from pygame.locals import KEYDOWN, K_q
 SCREENSIZE = WIDTH, HEIGHT = 800, 600
 BLACK = (0, 0, 0)
 GREY = (160, 160, 160)
+LIGHT_GREY = (245, 245, 245)
 WHITE = (255, 255, 255)
 
 
@@ -408,13 +409,19 @@ class Grid:
         for cell in borders:
             self.grid[cell[0]][cell[1]] = CellVal.OBSTACLE_ART.value
 
+    # def xy_to_cell(self, loc):
+    #     """
+    #     Converts x and y from Motive to new coordinate system
+    #     """
+    #     x = -loc[0]
+    #     y = -loc[1]
+    #     return (int(self.grid_origin_cell[0] + np.round(x / self.cell_size)), int(self.grid_origin_cell[1] + np.round(y / self.cell_size)))
+
     def xy_to_cell(self, loc):
         """
-        Converts x and y from Motive to new coordinate system
+        Converts x and y from Motive to new coordinate system (LAB's coordinates)
         """
-        x = -loc[0]
-        y = -loc[1]
-        return (int(self.grid_origin_cell[0] + np.round(x / self.cell_size)), int(self.grid_origin_cell[1] + np.round(y / self.cell_size)))
+        return int(- loc[1] / self.cell_size), int(loc[0] / self.cell_size)
 
     def cell_to_grid_cell(self, loc):
         new_origin = (self.x_range[0], self.y_range[1])
