@@ -9,9 +9,10 @@ import mockup
 
 from threading import Condition
 
-from Grid import SCREENSIZE, WIDTH, HEIGHT
 from arguments_parser import ArgumentsParser
 from button import Button
+from globals import SCREENSIZE, LEFT_SCREEN_ALIGNMENT, BUTTON_BASE_FONT_SIZE, GEN_SCENE_BUTTON_COLOR, \
+    RUN_PLANNER_BUTTON_COLOR, BROADCAST_BUTTON_COLOR
 from natnet.protocol import MarkerSetType
 from udp_server import UDPServer
 from Listener import Listener, ListenerType
@@ -77,30 +78,36 @@ def check_events(buttons, grid):
 
 def set_buttons(surface, grid_bottom_left):
     buttons_size = (110, 70)
+    left_gep = 10
+    top_gap = 20
     buttons = {
         "random_scene": Button(text=['Make Random', 'Scene'],
-                               pos=(10, grid_bottom_left + 20),
-                               size=buttons_size, color=(173, 216, 230),
+                               pos=(LEFT_SCREEN_ALIGNMENT, grid_bottom_left + top_gap),
+                               size=buttons_size, color=GEN_SCENE_BUTTON_COLOR,
                                surface=surface,
-                               font_size=14),
+                               font_size=BUTTON_BASE_FONT_SIZE),
         "goals_from_scene": Button(text=['Load Goals', 'from Scene'],
-                                pos=(10 + buttons_size[0] + 10, grid_bottom_left + 20),
-                                size=buttons_size, color=(173, 216, 230),
+                                pos=(LEFT_SCREEN_ALIGNMENT + buttons_size[0] + left_gep,
+                                     grid_bottom_left + top_gap),
+                                size=buttons_size, color=GEN_SCENE_BUTTON_COLOR,
                                 surface=surface,
-                                font_size=14),
+                                font_size=BUTTON_BASE_FONT_SIZE),
         "goals_from_file": Button(text=['Load Goals', 'from File'],
-                                pos=(10 + 2*(buttons_size[0] + 10), grid_bottom_left + 20),
-                                size=buttons_size, color=(173, 216, 230),
+                                pos=(LEFT_SCREEN_ALIGNMENT + 2*(buttons_size[0] + left_gep),
+                                     grid_bottom_left + top_gap),
+                                size=buttons_size, color=GEN_SCENE_BUTTON_COLOR,
                                 surface=surface,
-                                font_size=14),
+                                font_size=BUTTON_BASE_FONT_SIZE),
         "run_planner": Button(text=['Run Planner'],
-                                pos=(10 + 3*(buttons_size[0] + 10), grid_bottom_left + 20),
-                                size=buttons_size, color=(255, 153, 18),
+                                pos=(LEFT_SCREEN_ALIGNMENT + 3*(buttons_size[0] + left_gep),
+                                     grid_bottom_left + top_gap),
+                                size=buttons_size, color=RUN_PLANNER_BUTTON_COLOR,
                                 surface=surface,
-                                font_size=14),
+                                font_size=BUTTON_BASE_FONT_SIZE),
         "broadcast": Button(text=['Broadcast Solution', 'and Data'],
-                                pos=(10 + 4*(buttons_size[0] + 10), grid_bottom_left + 20),
-                                size=buttons_size, color=(102, 205, 0),
+                                pos=(LEFT_SCREEN_ALIGNMENT + 4*(buttons_size[0] + left_gep),
+                                     grid_bottom_left + top_gap),
+                                size=buttons_size, color=BROADCAST_BUTTON_COLOR,
                                 surface=surface,
                                 font_size=14)
     }

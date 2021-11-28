@@ -10,7 +10,7 @@ from statistics import mode
 from matplotlib.widgets import Button
 from shapely.geometry import LineString
 
-SCREENSIZE = WIDTH, HEIGHT = 800, 600
+from globals import TOP_SCREEN_ALIGNMENT, LEFT_SCREEN_ALIGNMENT, WIDTH, HEIGHT, BLACK
 
 
 class CellVal(Enum):
@@ -68,14 +68,13 @@ class Grid:
         # this is the place in the window where the top-left corner of the grid is placed
         self.surface = surface
         self.line_width = 2
-        self.line_color = (0 , 0, 0)  # grid's lines color set to black
-        self.screen_grid_origin = (10, 10)
+        self.line_color = (0, 0, 0)  # grid's lines color set to black
+        self.screen_grid_origin = (LEFT_SCREEN_ALIGNMENT, TOP_SCREEN_ALIGNMENT)
         self.grid_draw_scale = 0.8
         # the dimension of a square grid cell (not depended on the actual grid cell in meters,
         # this is just for visualization)
         self.cell_dim = min(self.grid_draw_scale * WIDTH / self.cols, self.grid_draw_scale * HEIGHT / self.rows)
-        self.bottomleft = 10 + self.cell_dim * self.rows
-        print(self.bottomleft)
+        self.bottomleft = TOP_SCREEN_ALIGNMENT + self.cell_dim * self.rows
         # CellVal(Enum) = [white, salmon, green, red, black, royalblue]
         self.colors = [(255, 255, 255), (250, 128, 114), (102, 205, 0), (255, 0, 0), (0, 0, 0), (39, 64, 139)]
 
@@ -139,7 +138,7 @@ class Grid:
             # TODO: pass correct robot id to method
             # this is a tile for a robot - print robot id
             font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim/2))
-            text = font.render(str(robot_id), True, (0, 0, 0))  # print robot id in black
+            text = font.render(str(robot_id), True, BLACK)  # print robot id in black
             text_rect = text.get_rect(center=(x, y))
             self.surface.blit(text, text_rect)
 
