@@ -12,13 +12,16 @@ class Button:
         self.size = size
         self.color = color
         self.surface = surface
-        print(size)
         self.dim_x = (self.pos[0], self.pos[0] + self.size[0])
         self.dim_y = (self.pos[1], self.pos[1] + self.size[1])
 
         self.font = pygame.font.SysFont("Arial", font_size, bold=True)
 
     def show(self):
+        """
+        draws a button to screen.
+        if the mouse is on the button then makes an hover effect.
+        """
         mouse = pygame.mouse.get_pos()
 
         if self.pos[0] <= mouse[0] <= self.pos[0] + self.size[0] and \

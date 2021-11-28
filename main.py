@@ -54,7 +54,7 @@ def get_robots_state_to_send(robots_bodies, solution_paths, corners):
 
 def check_events(buttons, grid):
     """
-    check for events on the screen
+    Checks for events on the screen
     """
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -77,6 +77,9 @@ def check_events(buttons, grid):
 
 
 def set_buttons(surface, grid_bottom_left):
+    """
+    Sets a dictionary with buttons to use in the program.
+    """
     buttons_size = (110, 70)
     left_gep = 10
     top_gap = 20
@@ -150,15 +153,20 @@ def main():
     # initialize a planner: sets up grid object, updates it and allows to run solution planning
     planner_controller = PlannerController(arguments_parser=ap, listener=listener,
                                            broadcast_cond=broadcast_solution_cond, surface=surface)
-
+    # set buttons to draw on the screen (to add buttons - modify this method)
     buttons = set_buttons(surface, grid_bottom_left=planner_controller.grid.bottomleft)
 
+    # Main pyGame loop
     while True:
         check_events(buttons, planner_controller.grid)
-        planner_controller.set_grid()  # this call also takes care of setting everything that is being drawn to screen
 
+        # this call takes care of setting every grid-related thing that is being drawn to screen and draw it
+        planner_controller.set_grid()
+
+        # draw buttons
         for button_name, button in buttons.items():
             button.show()
+
         pygame.display.update()
 
     # if the user presses "Broadcast solution data" button then the program will continue,

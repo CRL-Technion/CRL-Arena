@@ -42,6 +42,10 @@ class PlannerController():
                          surface=surface)
 
     def set_grid(self):
+        """
+        Parses the data from the listener and sets the grid 2D array with relevent values in cells.
+        Also calls for pyGame methods to draw the grid.
+        """
         marker_sets = []
         for ms in self.listener.marker_sets:
             marker_sets.append(self.get_adjusted_markers_positions(ms))
@@ -57,7 +61,6 @@ class PlannerController():
         self.grid.surface.fill((245, 245, 245))  # fill screen background with light-gray color
         self.grid.draw_grid()
         self.grid.place_cells()
-
 
         # if 'run planner' button is clicked, then running the planner one time
         if self.grid.run_planner_cond:
