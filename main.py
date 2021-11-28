@@ -3,6 +3,8 @@ import time
 import json
 import argparse
 
+import pygame
+
 import mockup
 
 from threading import Condition
@@ -47,6 +49,18 @@ def get_robots_state_to_send(robots_bodies, solution_paths, corners):
     return sorted_tosend
 
 
+def check_events():
+    """
+    check for events on the screen
+    """
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+            pygame.quit()
+            sys.exit()
+
+
 def main():
     # TODO: define and describe demo behavior (for easy run)
     # Parse command-line arguments
@@ -69,6 +83,8 @@ def main():
     # start the listener
     listener.start()
 
+    pygame.init()
+
     # initialize a condition variable for starting to broadcast solution.
     # the variable is being pass to Grid object (from PlannerController)
     # and is notified if the user presses the "Broadcast solution data" button.
@@ -77,7 +93,11 @@ def main():
     # initialize a planner: sets up grid object, draws the arena and allows to run solution planning
     planner_controller = PlannerController(arguments_parser=ap, listener=listener,
                                            broadcast_cond=broadcast_solution_cond)
-    planner_controller.start()
+
+    while True:
+        check_events()
+        planner_controller.set_grid()  # this call also takes care of drawing to screen
+        pygame.display.update()
 
     # if the user presses "Broadcast solution data" button then the program will continue,
     # otherwise it'll wait at this point until shut down
@@ -117,6 +137,7 @@ def main():
         server.update_data(json.dumps(message))
         server.send_data()
         time.sleep(0.1)
+
 
 
 if __name__ == "__main__":

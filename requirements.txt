@@ -1,3 +1,4 @@
+pygame
 shapely
 animatplot==0.4.2
 backcall==0.2.0

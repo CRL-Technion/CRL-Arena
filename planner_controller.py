@@ -1,9 +1,5 @@
 import os
-import sys
 import numpy as np
-
-from threading import Thread
-
 import pygame
 
 from Grid import Grid
@@ -14,7 +10,7 @@ UBUNTU_DIR = "crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent/r
 # TODO: move to shared "util" files for global variables or make a class variable
 
 
-class PlannerController(Thread):
+class PlannerController():
     def __init__(self, arguments_parser, listener, broadcast_cond):
         super(PlannerController, self).__init__()
 
@@ -44,34 +40,28 @@ class PlannerController(Thread):
                          algorithm_output=self.algorithm_output,
                          paths_filename=self.paths_filename)
 
-    def run(self):
-        # TODO: This is bad practice and exhausting the CPU. Find a different way to run until stopped, maybe use
-        #  'asynio' lib or other way of event-looping (with threading, not processes)
-        while True:
-            marker_sets = []
-            for ms in self.listener.marker_sets:
-                marker_sets.append(self.get_adjusted_markers_positions(ms))
+    def set_grid(self):
+        marker_sets = []
+        for ms in self.listener.marker_sets:
+            marker_sets.append(self.get_adjusted_markers_positions(ms))
 
-            obstacles = [ms for ms in marker_sets if ms.type == MarkerSetType.Obstacle]
+        obstacles = [ms for ms in marker_sets if ms.type == MarkerSetType.Obstacle]
 
-            # (robot_id, MarkersSet)
-            robots = [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
-            self.grid.reset_grid()  # TODO: understand how to re-draw (update) without resetting every time
-            self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
-            self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
+        # (robot_id, MarkersSet)
+        robots = [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
+        self.grid.reset_grid()  # TODO: understand how to re-draw (update) without resetting every time
+        self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
+        self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
 
-            #time.sleep(1)
+        self.grid.surface.fill((245, 245, 245))  # fill screen background with light-gray color
+        self.grid.draw_grid()
+        self.grid.place_cells()
 
-            self.check_events()
-            self.grid.surface.fill((245, 245, 245))  # fill screen background with light-gray color
-            self.grid.draw_grid()
-            self.grid.place_cells()
-            pygame.display.update()
 
-            # if 'run planner' button is clicked, then running the planner one time
-            if self.grid.run_planner_cond:
-                self.run_planner()
-                self.grid.run_planner_cond = False
+        # if 'run planner' button is clicked, then running the planner one time
+        if self.grid.run_planner_cond:
+            self.run_planner()
+            self.grid.run_planner_cond = False
 
     def run_planner(self):
         """
@@ -156,13 +146,3 @@ class PlannerController(Thread):
             marker_set.positions[i].z = float("{:.4f}".format(marker_set.positions[i].z))
         return marker_set
 
-    def check_events(self):
-        """
-        check for events on the screen
-        """
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit()
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_q:
-                pygame.quit()
-                sys.exit()
