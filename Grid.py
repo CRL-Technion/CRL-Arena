@@ -73,7 +73,8 @@ class Grid:
         self.grid_draw_scale = 0.8
         # the dimension of a square grid cell (not depended on the actual grid cell in meters,
         # this is just for visualization)
-        self.cell_dim = min(self.grid_draw_scale * WIDTH / self.cols, self.grid_draw_scale * HEIGHT / self.rows)
+        self.cell_dim = min(self.grid_draw_scale * (WIDTH - LEFT_SCREEN_ALIGNMENT) / self.cols,
+                            self.grid_draw_scale * (HEIGHT - TOP_SCREEN_ALIGNMENT) / self.rows)
         self.bottomleft = TOP_SCREEN_ALIGNMENT + self.cell_dim * self.rows
         # CellVal(Enum) = [white, salmon, green, red, black, royalblue]
         self.colors = [(255, 255, 255), (250, 128, 114), (102, 205, 0), (255, 0, 0), (0, 0, 0), (39, 64, 139)]
@@ -175,18 +176,36 @@ class Grid:
             (grid_width + cont_x,
              grid_height + cont_y), self.line_width)
 
+        # TODO: maybe draw lab's coordinates in light gray and row-cols in black
         # VERTICAL DIVISIONS (draw vertical lines in grid)
-        for x in range(self.cols):
+        for col in range(self.cols):
             pygame.draw.line(
                 self.surface, self.line_color,
-                (cont_x + (self.cell_dim * x), cont_y),
-                (cont_x + (self.cell_dim * x), grid_height + cont_y), 2)
+                (cont_x + (self.cell_dim * col), cont_y),
+                (cont_x + (self.cell_dim * col), grid_height + cont_y), 2)
+
+            # print columns number to screen
+            x_range = [i for i in range(self.x_range[0], self.x_range[1])]
+            font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim / 2))
+            text = font.render(str(x_range[col]), True, BLACK)  # print robot id in black
+            # number is placed in the center of the cell under the bottom of the grid
+            text_rect = text.get_rect(center=(cont_x + col * self.cell_dim + self.cell_dim / 2, self.bottomleft + 10))
+            self.surface.blit(text, text_rect)
         # HORIZONTAL DIVISIONS (draw horizontal lines in grid)
-        for x in range(self.rows):
+        for row in range(self.rows):
             pygame.draw.line(
                 self.surface, self.line_color,
-                (cont_x, cont_y + (self.cell_dim * x)),
-                (cont_x + grid_width, cont_y + (self.cell_dim * x)), 2)
+                (cont_x, cont_y + (self.cell_dim * row)),
+                (cont_x + grid_width, cont_y + (self.cell_dim * row)), 2)
+
+            # print rows number to screen
+            y_range = [i for i in range(self.y_range[0], self.y_range[1])]
+            y_range.reverse()
+            font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim / 2))
+            text = font.render(str(y_range[row]), True, BLACK)  # print robot id in black
+            # number is placed in the center of the cell under the bottom of the grid
+            text_rect = text.get_rect(center=(LEFT_SCREEN_ALIGNMENT - 10, cont_y + row * self.cell_dim + self.cell_dim / 2))
+            self.surface.blit(text, text_rect)
 
     def reset_grid(self):
         """
@@ -589,6 +608,7 @@ class Grid:
             # optimal distance to goal
             # NOTE!!! we don't need to switch start location x and y
             # because it is already saved in self.bots as required (y,x)
+            print(f'{(value[0], value[1]), (y, x)}')
             f.write(f'{self.get_optimal_length((value[0], value[1]), (y, x))}\n')
         f.close()
         self.has_paths = False
@@ -683,7 +703,7 @@ class Grid:
             self.grid[grid_cell[0]][grid_cell[1]] = CellVal.ROBOT_FULL.value
         elif self.grid[grid_cell[0]][grid_cell[1]] == CellVal.OBSTACLE_REAL.value:
             self.grid[grid_cell[0]][grid_cell[1]] = CellVal.COLLISION.value
-        self.bots[robot_id] = [grid_cell[0], grid_cell[1]]
+        self.bots[robot_id] = [mode_cell[0], mode_cell[1]]
 
 
 if __name__ == "__main__":
