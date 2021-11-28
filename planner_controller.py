@@ -45,12 +45,6 @@ class PlannerController(Thread):
                          paths_filename=self.paths_filename)
 
     def run(self):
-        # draw the base empty grid
-        #self.grid.plot_init_heatmap()
-
-
-
-
         # TODO: This is bad practice and exhausting the CPU. Find a different way to run until stopped, maybe use
         #  'asynio' lib or other way of event-looping (with threading, not processes)
         while True:
@@ -59,7 +53,7 @@ class PlannerController(Thread):
             for ms in self.listener.marker_sets:
                 marker_sets.append(self.get_adjusted_markers_positions(ms))
 
-            corners = [ms.to_dict() for ms in marker_sets if ms.type == MarkerSetType.Corner]
+            #corners = [ms.to_dict() for ms in marker_sets if ms.type == MarkerSetType.Corner]
             obstacles = [ms for ms in marker_sets if ms.type == MarkerSetType.Obstacle]
 
             # (robot_id, MarkersSet)
@@ -67,7 +61,7 @@ class PlannerController(Thread):
             self.grid.reset_grid()  # TODO: understand how to re-draw (update) without resetting every time
             #self.grid.process_corners(corners)  # TODO: only if corners changed
             self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
-            #self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
+            self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
 
             #time.sleep(1)
 

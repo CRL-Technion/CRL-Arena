@@ -90,8 +90,6 @@ class Grid:
         self.rows = int(rows)
         self.cols = int(cols)
 
-        print(rows)
-        print(cols)
         # OUR GRID MAP:
         #self.cellMAP = np.random.randint(2, size=(self.rows, self.cols))
 
@@ -103,7 +101,6 @@ class Grid:
         # self.cols = int(12 / cell_size)
         # TODO: consider remove origin_cell and change xy to cell translation based on new grid
         self.grid_origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
-        print(self.grid_origin_cell)
         self.screen_grid_origin = (10, 10)  # this is the place in the window where the top-left corner of the grid is placed
         self.cell_dim = 30  # the dimension of a square grid cell (not depented on the actual grid cell in meters, this is just for visualization)
 
@@ -125,8 +122,8 @@ class Grid:
         self.fig = None
         self.ax = None
 
-        # [white, green, red, black, gray]
-        self.cMap = mpl.colors.ListedColormap([(1,1,1), (1, 0.4, 0.57), (0,1,0), (1,0,0), (0,0,0), (.5,.5,.5)])
+        # CellVal(Enum) = [white, salmon, green, red, black, royalblue]
+        self.colors = [(255, 255, 255), (250, 128, 114), (102, 205, 0), (255, 0, 0), (0, 0, 0), (39, 64, 139)]
 
         self.heatmap = None
         self.cid = None
@@ -160,12 +157,12 @@ class Grid:
         for row in range(self.rows):
             for column in range(self.cols):
                 # Is the grid cell tiled ?
-                if (self.grid[row][column] == CellVal.OBSTACLE_REAL.value):
+                if (self.grid[row][column] != CellVal.EMPTY.value):
                     self.drawSquareCell(
                         self.screen_grid_origin[0] + (self.cell_dim * column)
                         + cellBorder + self._VARS['lineWidth'] / 2,
                         self.screen_grid_origin[1] + (self.cell_dim * row) + cellBorder + self._VARS['lineWidth'] / 2,
-                        celldimX, celldimY)
+                        celldimX, celldimY, self.colors[self.grid[row][column]])
                     # self.drawSquareCell(
                     #     self.screen_grid_origin[0] + (celldimY * row)
                     #     + cellBorder + (2 * row * cellBorder) + self._VARS['lineWidth'] / 2,
@@ -174,9 +171,9 @@ class Grid:
                     #     celldimX, celldimY)
 
     # Draw filled rectangle at coordinates
-    def drawSquareCell(self, x, y, dimX, dimY):
+    def drawSquareCell(self, x, y, dimX, dimY, color):
         pygame.draw.rect(
-            self._VARS['surf'], BLACK,
+            self._VARS['surf'], color,
             (x, y, dimX, dimY)
         )
 
@@ -274,9 +271,7 @@ class Grid:
             obst_cord = self.get_positions_list(obst.positions)
             blocked_cells = self.__get_blocked_cells(obst_cord)
             for coord in blocked_cells:
-                print("prev: " + str(coord))
                 new_coord = self.cell_to_grid_cell(coord)
-                print("after: " + str(new_coord))
                 self.grid[new_coord[1]][new_coord[0]] = CellVal.OBSTACLE_REAL.value
 
     def add_robots(self, robots, tolerance=1):
@@ -409,14 +404,6 @@ class Grid:
         for cell in borders:
             self.grid[cell[0]][cell[1]] = CellVal.OBSTACLE_ART.value
 
-    # def xy_to_cell(self, loc):
-    #     """
-    #     Converts x and y from Motive to new coordinate system
-    #     """
-    #     x = -loc[0]
-    #     y = -loc[1]
-    #     return (int(self.grid_origin_cell[0] + np.round(x / self.cell_size)), int(self.grid_origin_cell[1] + np.round(y / self.cell_size)))
-
     def xy_to_cell(self, loc):
         """
         Converts x and y from Motive to new coordinate system (LAB's coordinates)
@@ -425,9 +412,6 @@ class Grid:
 
     def cell_to_grid_cell(self, loc):
         new_origin = (self.x_range[0], self.y_range[1])
-        print("new origin: " + str(new_origin))
-        # temp = (-loc[0]+new_origin[0], -loc[1]+new_origin[1])
-        # return -temp[0], temp[1]
         return int(np.abs(new_origin[0] - loc[0])), int(np.abs(new_origin[1] - loc[1]))
 
     def process_corners(self, corners):
