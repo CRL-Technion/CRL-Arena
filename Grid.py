@@ -1,20 +1,15 @@
-import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 import astar
 import random
 import itertools
+import pygame
 
 from enum import Enum
 from statistics import mode
 from matplotlib.widgets import Button
 from shapely.geometry import LineString
 
-import pygame
-from pygame.locals import KEYDOWN, K_q
-
-# CONSTANTS:
 SCREENSIZE = WIDTH, HEIGHT = 800, 600
 
 
@@ -42,6 +37,7 @@ class Grid:
                  goal_locations,
                  paths_filename,
                  algorithm_output,
+                 surface
                  ):
         """
         cell_size: in meters
@@ -70,7 +66,7 @@ class Grid:
 
         ## Grid visualization parameters
         # this is the place in the window where the top-left corner of the grid is placed
-        self.surface = pygame.display.set_mode(SCREENSIZE)
+        self.surface = surface
         self.line_width = 2
         self.line_color = (0 , 0, 0)  # grid's lines color set to black
         self.screen_grid_origin = (10, 10)
@@ -78,6 +74,8 @@ class Grid:
         # the dimension of a square grid cell (not depended on the actual grid cell in meters,
         # this is just for visualization)
         self.cell_dim = min(self.grid_draw_scale * WIDTH / self.cols, self.grid_draw_scale * HEIGHT / self.rows)
+        self.bottomleft = 10 + self.cell_dim * self.rows
+        print(self.bottomleft)
         # CellVal(Enum) = [white, salmon, green, red, black, royalblue]
         self.colors = [(255, 255, 255), (250, 128, 114), (102, 205, 0), (255, 0, 0), (0, 0, 0), (39, 64, 139)]
 
@@ -119,13 +117,15 @@ class Grid:
                 # is the grid cell tiled ?
                 if self.grid[row][column] != CellVal.EMPTY.value:
                     # if the cell is not empty, then we place a colored tile in it
+                    robot_id = -1 if self.grid[row][column] != CellVal.ROBOT_FULL.value else 1
+                    # TODO: find robot in position if necessary
                     self.draw_square_cell(
                         x=self.screen_grid_origin[0] + (self.cell_dim * column) + self.line_width + cell_border,
                         y=self.screen_grid_origin[1] + (self.cell_dim * row) + self.line_width + cell_border,
-                        tile_dim=tile_dim, cell_color=self.colors[self.grid[row][column]])
+                        tile_dim=tile_dim, cell_color=self.colors[self.grid[row][column]], robot_id=robot_id)
 
     # Draw filled rectangle at coordinates
-    def draw_square_cell(self, x, y, tile_dim, cell_color):
+    def draw_square_cell(self, x, y, tile_dim, cell_color, robot_id=-1):
         """
         draws a single colored tile in a grid cell
         """
@@ -133,6 +133,15 @@ class Grid:
             self.surface, cell_color,
             (x, y, tile_dim, tile_dim)
         )
+
+        if robot_id > -1:
+            # TODO: fix id size and position
+            # TODO: pass correct robot id to method
+            # this is a tile for a robot - print robot id
+            font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim/2))
+            text = font.render(str(robot_id), True, (0, 0, 0))  # print robot id in black
+            text_rect = text.get_rect(center=(x, y))
+            self.surface.blit(text, text_rect)
 
     def draw_grid(self):
         """

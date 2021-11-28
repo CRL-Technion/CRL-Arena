@@ -9,7 +9,9 @@ import mockup
 
 from threading import Condition
 
+from Grid import SCREENSIZE, WIDTH, HEIGHT
 from arguments_parser import ArgumentsParser
+from button import Button
 from natnet.protocol import MarkerSetType
 from udp_server import UDPServer
 from Listener import Listener, ListenerType
@@ -49,16 +51,61 @@ def get_robots_state_to_send(robots_bodies, solution_paths, corners):
     return sorted_tosend
 
 
-def check_events():
+def check_events(buttons, grid):
     """
     check for events on the screen
     """
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            sys.exit()
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_q:
             pygame.quit()
             sys.exit()
+
+        # checks if a mouse is clicked
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # if the mouse is clicked on a - capture which one and activate relevant function
+            if buttons["random_scene"].is_hover():
+                grid.make_scen()
+            elif buttons["goals_from_scene"].is_hover():
+                grid.init_from_scene()
+            elif buttons["goals_from_file"].is_hover():
+                grid.init_from_file()
+            elif buttons["run_planner"].is_hover():
+                grid.run_planner()
+            elif buttons["broadcast"].is_hover():
+                grid.broadcast_solution()
+
+
+def set_buttons(surface, grid_bottom_left):
+    buttons_size = (110, 70)
+    buttons = {
+        "random_scene": Button(text=['Make Random', 'Scene'],
+                               pos=(10, grid_bottom_left + 20),
+                               size=buttons_size, color=(173, 216, 230),
+                               surface=surface,
+                               font_size=14),
+        "goals_from_scene": Button(text=['Load Goals', 'from Scene'],
+                                pos=(10 + buttons_size[0] + 10, grid_bottom_left + 20),
+                                size=buttons_size, color=(173, 216, 230),
+                                surface=surface,
+                                font_size=14),
+        "goals_from_file": Button(text=['Load Goals', 'from File'],
+                                pos=(10 + 2*(buttons_size[0] + 10), grid_bottom_left + 20),
+                                size=buttons_size, color=(173, 216, 230),
+                                surface=surface,
+                                font_size=14),
+        "run_planner": Button(text=['Run Planner'],
+                                pos=(10 + 3*(buttons_size[0] + 10), grid_bottom_left + 20),
+                                size=buttons_size, color=(255, 153, 18),
+                                surface=surface,
+                                font_size=14),
+        "broadcast": Button(text=['Broadcast Solution', 'and Data'],
+                                pos=(10 + 4*(buttons_size[0] + 10), grid_bottom_left + 20),
+                                size=buttons_size, color=(102, 205, 0),
+                                surface=surface,
+                                font_size=14)
+    }
+
+    return buttons
 
 
 def main():
@@ -83,20 +130,28 @@ def main():
     # start the listener
     listener.start()
 
+    # init pygame
     pygame.init()
+    surface = pygame.display.set_mode(SCREENSIZE)
 
     # initialize a condition variable for starting to broadcast solution.
     # the variable is being pass to Grid object (from PlannerController)
     # and is notified if the user presses the "Broadcast solution data" button.
     broadcast_solution_cond = Condition()
+    broadcast_solution = False
 
-    # initialize a planner: sets up grid object, draws the arena and allows to run solution planning
+    # initialize a planner: sets up grid object, updates it and allows to run solution planning
     planner_controller = PlannerController(arguments_parser=ap, listener=listener,
-                                           broadcast_cond=broadcast_solution_cond)
+                                           broadcast_cond=broadcast_solution_cond, surface=surface)
+
+    buttons = set_buttons(surface, grid_bottom_left=planner_controller.grid.bottomleft)
 
     while True:
-        check_events()
-        planner_controller.set_grid()  # this call also takes care of drawing to screen
+        check_events(buttons, planner_controller.grid)
+        planner_controller.set_grid()  # this call also takes care of setting everything that is being drawn to screen
+
+        for button_name, button in buttons.items():
+            button.show()
         pygame.display.update()
 
     # if the user presses "Broadcast solution data" button then the program will continue,
@@ -114,7 +169,7 @@ def main():
     print("Waiting 2 seconds for the system to stabilized")
     time.sleep(2)
 
-    while True:
+    if broadcast_solution is True:
         # the filter here is based on a convention -
         # all rigid bodies which represent robots have sequential ids starting from 101
         # TODO: remove this convention and replace with generic solution

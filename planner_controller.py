@@ -11,7 +11,7 @@ UBUNTU_DIR = "crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent/r
 
 
 class PlannerController():
-    def __init__(self, arguments_parser, listener, broadcast_cond):
+    def __init__(self, arguments_parser, listener, broadcast_cond, surface):
         super(PlannerController, self).__init__()
 
         self.listener = listener
@@ -38,7 +38,8 @@ class PlannerController():
                          scene_filename=DATA_PATH + self.arguments_parser.scene,
                          goal_locations=DATA_PATH + self.arguments_parser.goals,
                          algorithm_output=self.algorithm_output,
-                         paths_filename=self.paths_filename)
+                         paths_filename=self.paths_filename,
+                         surface=surface)
 
     def set_grid(self):
         marker_sets = []
