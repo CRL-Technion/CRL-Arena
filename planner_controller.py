@@ -1,5 +1,5 @@
 import os
-import time
+import sys
 import numpy as np
 
 from threading import Thread
@@ -62,7 +62,7 @@ class PlannerController(Thread):
 
             #time.sleep(1)
 
-            self.grid.check_events()
+            self.check_events()
             self.grid.surface.fill((245, 245, 245))  # fill screen background with light-gray color
             self.grid.draw_grid()
             self.grid.place_cells()
@@ -155,3 +155,14 @@ class PlannerController(Thread):
             marker_set.positions[i].y = float("{:.4f}".format(marker_set.positions[i].y))
             marker_set.positions[i].z = float("{:.4f}".format(marker_set.positions[i].z))
         return marker_set
+
+    def check_events(self):
+        """
+        check for events on the screen
+        """
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+                pygame.quit()
+                sys.exit()

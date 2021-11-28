@@ -1,6 +1,5 @@
 import sys
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import astar
@@ -9,7 +8,6 @@ import itertools
 
 from enum import Enum
 from statistics import mode
-from matplotlib.colors import ListedColormap
 from matplotlib.widgets import Button
 from shapely.geometry import LineString
 
@@ -18,8 +16,6 @@ from pygame.locals import KEYDOWN, K_q
 
 # CONSTANTS:
 SCREENSIZE = WIDTH, HEIGHT = 800, 600
-
-
 
 
 class CellVal(Enum):
@@ -34,17 +30,6 @@ class CellVal(Enum):
     OBSTACLE_ART = 5  # artificial obstacle
 
 
-class Corner(Enum):
-    """
-    Values associated with corner markers
-    """
-    TOPLEFT = 1
-    TOPRIGHT = 2
-    BOTTOMLEFT = 3
-    BOTTOMRIGHT = 4
-
-
-# TODO: Clean the entire class code - remove unnecessary lines and methods and simplify logic
 class Grid:
     """
     This class is the visual representation of the arena, including robots, obstacles, and borders.
@@ -57,18 +42,17 @@ class Grid:
                  goal_locations,
                  paths_filename,
                  algorithm_output,
-                 x_dim: int = 10, y_dim: int = 6,
                  ):
         """
-        x_dim: in meters, size of overall arena; maximum 12
-        y_dim: in meters, size of overall arena; maximum 12
         cell_size: in meters
+        rows: number of rows in the grid (float - convert to int)
+        cols: number of columns in the grid (float - convert to int)
+        broadcast_cond: condition variable for notifing main loop on broadcast activation
         map_filename: name of .map file that is output
         scen_filename: name of .scen file that is output
-        end_locations_filename: name of .txt file containing each robot's end location
+        goal_locations: name of .txt file containing each robot's goal location
         paths_filename: name of .txt file where planner will output paths
         plan_filename: name of .txt file to be sent to ubuntu
-        ubuntu_dir: name of directory in the ubuntu computer to send plan
         """
 
         ## Parameters for interaction with the main loop to activate events
@@ -76,13 +60,10 @@ class Grid:
         self.run_planner_cond = False
 
         ## Grid dimension and coordination parameters
-        # TODO: consider remove origin_cell and change xy to cell translation based on new grid
-        self.cell_size = cell_size  # meters TODO: consider remove from grid after removing arena restriction
-        # TODO: changed from what originally was here - validate everywhere + documentation
+        self.cell_size = cell_size  # meters
         self.rows = int(rows)
         self.cols = int(cols)
         self.grid_origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
-        # TODO: changed from what originally was here - validate everywhere + documentation
         # x and y ranges are aligned with the LAB's coordinates system
         self.y_range = [int(- np.floor(self.rows / 2)), int(np.ceil(self.rows / 2))]
         self.x_range = [int(- np.floor(self.cols / 2)), int(np.ceil(self.cols / 2))]
@@ -97,31 +78,26 @@ class Grid:
         # the dimension of a square grid cell (not depended on the actual grid cell in meters,
         # this is just for visualization)
         self.cell_dim = min(self.grid_draw_scale * WIDTH / self.cols, self.grid_draw_scale * HEIGHT / self.rows)
-
-        # This is a 2D array representing the grid (!!!)
-        # NOTE (!) that accessing with (y,x) to be aligned with LAB's coordinates
-        self.grid = []
-
-        # variables related to matplotlib visualization
-        self.fig = None
-        self.ax = None
-
         # CellVal(Enum) = [white, salmon, green, red, black, royalblue]
         self.colors = [(255, 255, 255), (250, 128, 114), (102, 205, 0), (255, 0, 0), (0, 0, 0), (39, 64, 139)]
 
-        self.heatmap = None
-        self.cid = None
-
-        # variables related to exporting map and scene files and path file
+        ## Parameters for importing and exporting data from and to files
         self.mapfile = map_filename
         self.scenfile = scene_filename
         self.pathsfile = paths_filename
         self.algorithm_output = algorithm_output
         self.end_locations_file = goal_locations
+
+        ## Helper parameters
+        # This is a 2D array representing the grid
+        # NOTE (!) that accessing with (y,x) to be aligned with LAB's coordinates
+        self.grid = []
         self.endspots = []
         self.has_paths = False
+        # saves path after running the solver (for external visualization)
+        self.solution_paths_translated = {}
 
-        # association of robots with their ID
+        ## Robots management parameters
         self.bots = {}  # maps bot IDs to current spot, NOTE that locations are saved as (y,x)
         self.end_bots = {}  # maps bot ID's to end spot (if one exists)
         self.bad_bots = []  # simple list of all robots that aren't completely on one cell
@@ -129,34 +105,40 @@ class Grid:
         self.bot_boxes = []  # all the text boxes representing robots
         self.end_boxes = []  # all the text boxes representing the robots' end locations
 
-        # saves path after running the solver
-        self.solution_paths_translated = {}
-
-    # NEW METHOD FOR ADDING CELLS :
     def place_cells(self):
-        # GET CELL DIMENSIONS...
-        cellBorder = self.cell_dim / 10
-        celldimX = celldimY = self.cell_dim - (cellBorder * 2)
-        # DOUBLE LOOP
+        """
+        adding colored object to grid, based on the cell's status
+        """
+        # get cells dimension
+        cell_border = self.cell_dim / 10
+        tile_dim = self.cell_dim - (cell_border * 2)  # NOTE that the tile we draw is square
+
+        # travers the grid
         for row in range(self.rows):
             for column in range(self.cols):
-                # Is the grid cell tiled ?
-                if (self.grid[row][column] != CellVal.EMPTY.value):
+                # is the grid cell tiled ?
+                if self.grid[row][column] != CellVal.EMPTY.value:
+                    # if the cell is not empty, then we place a colored tile in it
                     self.draw_square_cell(
-                        self.screen_grid_origin[0] + (self.cell_dim * column)
-                        + cellBorder + self.line_width / 2,
-                        self.screen_grid_origin[1] + (self.cell_dim * row) + cellBorder + self.line_width / 2,
-                        celldimX, celldimY, self.colors[self.grid[row][column]])
+                        x=self.screen_grid_origin[0] + (self.cell_dim * column) + self.line_width + cell_border,
+                        y=self.screen_grid_origin[1] + (self.cell_dim * row) + self.line_width + cell_border,
+                        tile_dim=tile_dim, cell_color=self.colors[self.grid[row][column]])
 
     # Draw filled rectangle at coordinates
-    def draw_square_cell(self, x, y, dimX, dimY, color):
+    def draw_square_cell(self, x, y, tile_dim, cell_color):
+        """
+        draws a single colored tile in a grid cell
+        """
         pygame.draw.rect(
-            self.surface, color,
-            (x, y, dimX, dimY)
+            self.surface, cell_color,
+            (x, y, tile_dim, tile_dim)
         )
 
     def draw_grid(self):
-
+        """
+        draws the grid to the screen based on the values in self.grid
+        """
+        # dimensions on screen
         cont_x, cont_y = self.screen_grid_origin
         grid_height = int(self.rows) * self.cell_dim
         grid_width = int(self.cols) * self.cell_dim
@@ -167,44 +149,36 @@ class Grid:
             self.surface, self.line_color,
             (cont_x, cont_y),
             (grid_width + cont_x, cont_y), self.line_width)
-        # # BOTTOM lEFT TO RIGHT
+        # BOTTOM lEFT TO RIGHT
         pygame.draw.line(
             self.surface, self.line_color,
             (cont_x, grid_height + cont_y),
             (grid_width + cont_x,
              grid_height + cont_y), self.line_width)
-        # # LEFT TOP TO BOTTOM
+        # LEFT TOP TO BOTTOM
         pygame.draw.line(
             self.surface, self.line_color,
             (cont_x, cont_y),
             (cont_x, cont_y + grid_height), self.line_width)
-        # # RIGHT TOP TO BOTTOM
+        # RIGHT TOP TO BOTTOM
         pygame.draw.line(
             self.surface, self.line_color,
             (grid_width + cont_x, cont_y),
             (grid_width + cont_x,
              grid_height + cont_y), self.line_width)
 
-        # VERTICAL DIVISIONS: (0,1,2) for grid(3) for example
+        # VERTICAL DIVISIONS (draw vertical lines in grid)
         for x in range(self.cols):
             pygame.draw.line(
                 self.surface, self.line_color,
                 (cont_x + (self.cell_dim * x), cont_y),
                 (cont_x + (self.cell_dim * x), grid_height + cont_y), 2)
-        # HORIZONTAl DIVISIONS
+        # HORIZONTAL DIVISIONS (draw horizontal lines in grid)
         for x in range(self.rows):
             pygame.draw.line(
                 self.surface, self.line_color,
                 (cont_x, cont_y + (self.cell_dim * x)),
                 (cont_x + grid_width, cont_y + (self.cell_dim * x)), 2)
-
-    def check_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit()
-            elif event.type == KEYDOWN and event.key == K_q:
-                pygame.quit()
-                sys.exit()
 
     def reset_grid(self):
         """
