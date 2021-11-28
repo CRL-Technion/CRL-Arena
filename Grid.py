@@ -133,7 +133,7 @@ class Grid:
         self.solution_paths_translated = {}
 
     # NEW METHOD FOR ADDING CELLS :
-    def placeCells(self):
+    def place_cells(self):
         # GET CELL DIMENSIONS...
         cellBorder = self.cell_dim / 10
         celldimX = celldimY = self.cell_dim - (cellBorder * 2)
@@ -142,26 +142,20 @@ class Grid:
             for column in range(self.cols):
                 # Is the grid cell tiled ?
                 if (self.grid[row][column] != CellVal.EMPTY.value):
-                    self.drawSquareCell(
+                    self.draw_square_cell(
                         self.screen_grid_origin[0] + (self.cell_dim * column)
                         + cellBorder + self.line_width / 2,
                         self.screen_grid_origin[1] + (self.cell_dim * row) + cellBorder + self.line_width / 2,
                         celldimX, celldimY, self.colors[self.grid[row][column]])
-                    # self.drawSquareCell(
-                    #     self.screen_grid_origin[0] + (celldimY * row)
-                    #     + cellBorder + (2 * row * cellBorder) + self._VARS['lineWidth'] / 2,
-                    #     self.screen_grid_origin[1] + (celldimX * column)
-                    #     + cellBorder + (2 * column * cellBorder) + self._VARS['lineWidth'] / 2,
-                    #     celldimX, celldimY)
 
     # Draw filled rectangle at coordinates
-    def drawSquareCell(self, x, y, dimX, dimY, color):
+    def draw_square_cell(self, x, y, dimX, dimY, color):
         pygame.draw.rect(
             self.surface, color,
             (x, y, dimX, dimY)
         )
 
-    def drawSquareGrid(self):
+    def draw_grid(self):
 
         cont_x, cont_y = self.screen_grid_origin
         grid_height = int(self.rows) * self.cell_dim
@@ -204,7 +198,7 @@ class Grid:
                 (cont_x, cont_y + (self.cell_dim * x)),
                 (cont_x + grid_width, cont_y + (self.cell_dim * x)), 2)
 
-    def checkEvents(self):
+    def check_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
@@ -340,55 +334,6 @@ class Grid:
                 print('found collision at ', value)
                 self.grid[value[0]][value[1]] = CellVal.COLLISION
 
-    def restrict_arena(self):
-        """
-        Places artificial obstacles around the desired arena
-        TODO: Not sure that it is necessary, try to draw only a grid that represents the actual arena
-        TODO: simplify method
-        """
-        # if we have our corner markers in the scene, use those; otherwise, use the built-in parameters
-        if len(self.corners) == 4:
-            x_min = max(self.corners[Corner.TOPLEFT.value][0], self.corners[Corner.BOTTOMLEFT.value][0])
-            x_max = min(self.corners[Corner.TOPRIGHT.value][0], self.corners[Corner.BOTTOMRIGHT.value][0])
-            y_min = max(self.corners[Corner.TOPRIGHT.value][1], self.corners[Corner.TOPLEFT.value][1])
-            y_max = max(self.corners[Corner.BOTTOMRIGHT.value][1], self.corners[Corner.BOTTOMLEFT.value][1])
-
-            self.x_range = [int(x_min), int(x_max)]
-            self.y_range = [int(y_min), int(y_max)]
-
-            top_right = [y_min, x_max]
-            top_left = [y_min, x_min]
-            bottom_right = [y_max, x_max]
-            bottom_left = [y_max, x_min]
-        else:
-            #create artificial based on given parameters
-            x = int(self.x_dim / self.cell_size)
-            y = int(self.y_dim / self.cell_size)
-            # corners
-            top_left = [(self.origin_cell[0] - y // 2), self.origin_cell[1] + x // 2] #NOT cartesian
-            bottom_left = [(self.origin_cell[0] + y // 2), self.origin_cell[1] + x // 2]
-            top_right = [(self.origin_cell[0] - y // 2), self.origin_cell[1] - x // 2]
-            bottom_right = [(self.origin_cell[0] + y // 2), self.origin_cell[1] - x // 2]
-        corners_to_use = [top_left, top_right, bottom_right, bottom_left]
-        borders = corners_to_use
-        if len(self.corners)==4:
-            for i in range(top_left[1], top_right[1]):  # top border
-                borders.append([top_right[0], i])
-            for i in range(bottom_left[1], bottom_right[1]):  # bottom border
-                borders.append([bottom_right[0], i])
-        else:
-            for i in range(top_left[1], top_right[1], -1): # top border
-                borders.append([top_right[0], i])
-            for i in range(bottom_left[1], bottom_right[1], -1): # bottom border
-                borders.append([bottom_right[0], i])
-        for i in range(top_left[0], bottom_left[0]): # left border
-            borders.append([i, bottom_left[1]])
-        for i in range(top_right[0], bottom_right[0]): # right border
-            borders.append([i, bottom_right[1]])
-        # indicate all relevant cells in the grid
-        for cell in borders:
-            self.grid[cell[0]][cell[1]] = CellVal.OBSTACLE_ART.value
-
     def xy_to_cell(self, loc):
         """
         Converts x and y from Motive to new coordinate system (LAB's coordinates)
@@ -398,69 +343,6 @@ class Grid:
     def cell_to_grid_cell(self, loc):
         new_origin = (self.x_range[0], self.y_range[1])
         return int(np.abs(new_origin[0] - loc[0])), int(np.abs(new_origin[1] - loc[1]))
-
-    def process_corners(self, corners):
-        """
-        Sets the boundary of the arena according to the corners positions.
-        TODO: simplify method
-        """
-        #dist is in cm
-        dist = self.cell_size / 2.0
-
-        for corner in corners:
-            name = corner['name']
-            grid_positions = []
-            if name[name.index('-')+1::] == 'TL':
-                for position in corner['positions']:
-                    position['x'] = position['x'] - dist
-                    position['y'] = position['y'] - dist
-                    x, y = self.xy_to_cell([position['x'], position['y']])
-                    grid_positions.append([x, y])
-                x = max(position[0] for position in grid_positions)
-                y = max(position[1] for position in grid_positions)
-                id = 1
-            elif name[name.index('-')+1::] == 'BR':
-                for position in corner['positions']:
-                    position['x'] = position['x'] + dist
-                    position['y'] = position['y'] + dist
-                    x, y = self.xy_to_cell([position['x'], position['y']])
-                    grid_positions.append([x, y])
-                x = min(position[0] for position in grid_positions)
-                y = min(position[1] for position in grid_positions)
-                id = 4
-            elif name[name.index('-')+1::] == 'TR':
-                for position in corner['positions']:
-                    position['x'] = position['x'] - dist
-                    position['y'] = position['y'] + dist
-                    x, y = self.xy_to_cell([position['x'], position['y']])
-                    grid_positions.append([x, y])
-                x = min(position[0] for position in grid_positions)
-                y = max(position[1] for position in grid_positions)
-                id = 2
-            elif name[name.index('-')+1::] == 'BL':
-                for position in corner['positions']:
-                    position['x'] = position['x'] + dist
-                    position['y'] = position['y'] - dist
-                    x, y = self.xy_to_cell([position['x'], position['y']])
-                    grid_positions.append([x, y])
-                x = max(position[0] for position in grid_positions)
-                y = min(position[1] for position in grid_positions)
-                id = 3
-            self.corners[id] = [y, x]  # here we swap the x's and y's. switching them to cartesian (visual)
-
-    def plot_init_heatmap(self):
-        """
-        Initializes a heatmap to be used to display the plot; should be called before plot_render().
-        """
-        self.fig, self.ax = plt.subplots(1, 1)
-        # bounds = range(self.cMap.N)
-        # norm = mpl.colors.BoundaryNorm(bounds, self.cMap.N)
-        # self.grid[0][0] = CellVal.OBSTACLE_ART.value
-        data = self.grid
-        self.heatmap = self.ax.pcolor(data, edgecolors='k', linewidths=0.01, cmap=self.cMap, vmin=0, vmax=5)
-        self.fig.canvas.draw()
-        #plt.gca().invert_yaxis()
-        self.fig.show()
 
     def init_from_scene(self, event=None):
         """
@@ -533,12 +415,14 @@ class Grid:
         with self.broadcast_cond:
             self.broadcast_cond.notify()
 
-    # TODO: add detailed explaination about the method
+# TODO: add to new grid visualization methods
+# # Notify about robots that are out of bounds
+# for robot_id, markers in self.out_of_bounds_bots:
+#     print(f"Robot {robot_id} is out of bounds and will not be shown in the visualization.\n"
+#           f"Its markers are located in cells: {markers}")
+
+    # TODO: remove after moving all all functionality to new grid visualization
     def plot_render(self):
-        # Notify about robots that are out of bounds
-        for robot_id, markers in self.out_of_bounds_bots:
-            print(f"Robot {robot_id} is out of bounds and will not be shown in the visualization.\n"
-                  f"Its markers are located in cells: {markers}")
 
         if not self.heatmap:
             self.plot_init_heatmap()

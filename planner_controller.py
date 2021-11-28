@@ -48,36 +48,30 @@ class PlannerController(Thread):
         # TODO: This is bad practice and exhausting the CPU. Find a different way to run until stopped, maybe use
         #  'asynio' lib or other way of event-looping (with threading, not processes)
         while True:
-            # marker_sets = self.listener.marker_sets
             marker_sets = []
             for ms in self.listener.marker_sets:
                 marker_sets.append(self.get_adjusted_markers_positions(ms))
 
-            #corners = [ms.to_dict() for ms in marker_sets if ms.type == MarkerSetType.Corner]
             obstacles = [ms for ms in marker_sets if ms.type == MarkerSetType.Obstacle]
 
             # (robot_id, MarkersSet)
             robots = [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
             self.grid.reset_grid()  # TODO: understand how to re-draw (update) without resetting every time
-            #self.grid.process_corners(corners)  # TODO: only if corners changed
             self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
             self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
 
             #time.sleep(1)
 
-            self.grid.checkEvents()
+            self.grid.check_events()
             self.grid.surface.fill((245, 245, 245))  # fill screen background with light-gray color
-            self.grid.drawSquareGrid()
-            self.grid.placeCells()
+            self.grid.draw_grid()
+            self.grid.place_cells()
             pygame.display.update()
 
             # if 'run planner' button is clicked, then running the planner one time
             if self.grid.run_planner_cond:
                 self.run_planner()
                 self.grid.run_planner_cond = False
-
-            # drawing the grid with the updated data
-            #self.grid.plot_render()
 
     def run_planner(self):
         """
