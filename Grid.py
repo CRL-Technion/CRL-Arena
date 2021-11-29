@@ -10,7 +10,7 @@ from statistics import mode
 from matplotlib.widgets import Button
 from shapely.geometry import LineString
 
-from globals import TOP_SCREEN_ALIGNMENT, LEFT_SCREEN_ALIGNMENT, WIDTH, HEIGHT, BLACK
+from globals import TOP_SCREEN_ALIGNMENT, LEFT_SCREEN_ALIGNMENT, WIDTH, HEIGHT, BLACK, GRAY
 
 
 class CellVal(Enum):
@@ -23,6 +23,7 @@ class CellVal(Enum):
     ROBOT_PARTIAL = 3  # robot is spread out over multiple cells
     OBSTACLE_REAL = 4
     OBSTACLE_ART = 5  # artificial obstacle
+    GOAL = 6
 
 
 class Grid:
@@ -61,8 +62,9 @@ class Grid:
         self.cols = int(cols)
         self.grid_origin_cell = [int(np.floor(self.cols / 2)), int(np.floor(self.rows / 2))]
         # x and y ranges are aligned with the LAB's coordinates system
-        self.y_range = [int(- np.floor(self.rows / 2)), int(np.ceil(self.rows / 2))]
-        self.x_range = [int(- np.floor(self.cols / 2)), int(np.ceil(self.cols / 2))]
+        # -1 is because we are considering the top limit as counting from 0
+        self.y_range = [int(- np.floor(self.rows / 2)), int(np.ceil(self.rows / 2)) - 1]
+        self.x_range = [int(- np.floor(self.cols / 2)), int(np.ceil(self.cols / 2)) - 1]
 
         ## Grid visualization parameters
         # this is the place in the window where the top-left corner of the grid is placed
@@ -70,14 +72,15 @@ class Grid:
         self.line_width = 2
         self.line_color = (0, 0, 0)  # grid's lines color set to black
         self.screen_grid_origin = (LEFT_SCREEN_ALIGNMENT, TOP_SCREEN_ALIGNMENT)
-        self.grid_draw_scale = 0.8
+        self.grid_draw_scale = 0.7
         # the dimension of a square grid cell (not depended on the actual grid cell in meters,
         # this is just for visualization)
         self.cell_dim = min(self.grid_draw_scale * (WIDTH - LEFT_SCREEN_ALIGNMENT) / self.cols,
                             self.grid_draw_scale * (HEIGHT - TOP_SCREEN_ALIGNMENT) / self.rows)
         self.bottomleft = TOP_SCREEN_ALIGNMENT + self.cell_dim * self.rows
-        # CellVal(Enum) = [white, salmon, green, red, black, royalblue]
-        self.colors = [(255, 255, 255), (250, 128, 114), (102, 205, 0), (255, 0, 0), (0, 0, 0), (39, 64, 139)]
+        # CellVal(Enum) = [white, salmon, green, red, black, royalblue, orange]
+        self.colors = [(255, 255, 255), (250, 128, 114), (102, 205, 0), (255, 0, 0),
+                       (0, 0, 0), (39, 64, 139), (255, 128, 0)]
 
         ## Parameters for importing and exporting data from and to files
         self.mapfile = map_filename
@@ -110,6 +113,10 @@ class Grid:
         # get cells dimension
         cell_border = self.cell_dim / 10
         tile_dim = self.cell_dim - (cell_border * 2)  # NOTE that the tile we draw is square
+
+        # set goal locations on grid
+        for robot_id, goal_loc in self.end_bots.items():
+            self.grid[goal_loc[0]][goal_loc[1]] = CellVal.GOAL.value
 
         # travers the grid
         for row in range(self.rows):
@@ -185,11 +192,16 @@ class Grid:
                 (cont_x + (self.cell_dim * col), grid_height + cont_y), 2)
 
             # print columns number to screen
-            x_range = [i for i in range(self.x_range[0], self.x_range[1])]
+            x_range = [i for i in range(self.x_range[0], self.x_range[1] + 1)]  # +1 to include last column
             font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim / 2))
-            text = font.render(str(x_range[col]), True, BLACK)  # print robot id in black
+            text = font.render(str(col), True, BLACK)
             # number is placed in the center of the cell under the bottom of the grid
             text_rect = text.get_rect(center=(cont_x + col * self.cell_dim + self.cell_dim / 2, self.bottomleft + 10))
+            self.surface.blit(text, text_rect)
+
+            text = font.render(str(x_range[col]), True, GRAY)
+            # number is placed in the center of the cell under the bottom of the grid
+            text_rect = text.get_rect(center=(cont_x + col * self.cell_dim + self.cell_dim / 2, self.bottomleft + 30))
             self.surface.blit(text, text_rect)
         # HORIZONTAL DIVISIONS (draw horizontal lines in grid)
         for row in range(self.rows):
@@ -199,13 +211,20 @@ class Grid:
                 (cont_x + grid_width, cont_y + (self.cell_dim * row)), 2)
 
             # print rows number to screen
-            y_range = [i for i in range(self.y_range[0], self.y_range[1])]
+            y_range = [i for i in range(self.y_range[0], self.y_range[1] + 1)]  # +1 to include last row
             y_range.reverse()
             font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim / 2))
-            text = font.render(str(y_range[row]), True, BLACK)  # print robot id in black
+            text = font.render(str(y_range[row]), True, GRAY)
             # number is placed in the center of the cell under the bottom of the grid
-            text_rect = text.get_rect(center=(LEFT_SCREEN_ALIGNMENT - 10, cont_y + row * self.cell_dim + self.cell_dim / 2))
+            text_rect = text.get_rect(center=(LEFT_SCREEN_ALIGNMENT - 30, cont_y + row * self.cell_dim + self.cell_dim / 2))
             self.surface.blit(text, text_rect)
+
+            text = font.render(str(row), True, BLACK)
+            # number is placed in the center of the cell under the bottom of the grid
+            text_rect = text.get_rect(
+                center=(LEFT_SCREEN_ALIGNMENT - 10, cont_y + row * self.cell_dim + self.cell_dim / 2))
+            self.surface.blit(text, text_rect)
+
 
     def reset_grid(self):
         """
@@ -251,7 +270,7 @@ class Grid:
             blocked_cells = self.__get_blocked_cells(obst_cord)
             for coord in blocked_cells:
                 new_coord = self.cell_to_grid_cell(coord)
-                self.grid[new_coord[1]][new_coord[0]] = CellVal.OBSTACLE_REAL.value
+                self.grid[new_coord[0]][new_coord[1]] = CellVal.OBSTACLE_REAL.value
 
     def add_robots(self, robots, tolerance=1):
         """
@@ -338,11 +357,12 @@ class Grid:
     def xy_to_cell(self, loc):
         """
         Converts x and y from Motive to new coordinate system (LAB's coordinates)
+        Returns as (y, x) (later translated to (row, column))
         """
-        return int(- loc[1] / self.cell_size), int(loc[0] / self.cell_size)
+        return -np.floor(loc[1] / self.cell_size), np.floor(loc[0] / self.cell_size)
 
     def cell_to_grid_cell(self, loc):
-        new_origin = (self.x_range[0], self.y_range[1])
+        new_origin = (self.y_range[1], self.x_range[0])  # loc is already (y, x) in lab's coords
         return int(np.abs(new_origin[0] - loc[0])), int(np.abs(new_origin[1] - loc[1]))
 
     def init_from_scene(self, event=None):
@@ -593,23 +613,22 @@ class Grid:
             # dimensions of the grid
             f.write(str(int(self.rows)) + '\t' + str(int(self.cols)) + '\t')
             # start location
-            f.write(str(value[1]) + '\t' + str(value[0]) + '\t')
+            f.write(str(value[1]) + '\t' + str(value[0]) + '\t')  # row, column
             # goal location
             # if there is already a prepared goal location in the dictionary waiting for use
             if (from_scratch == False) and key in self.end_bots:
                 print("will pull goal location from already existing goal locations set for robot ", key)
-                x, y = self.end_bots[key][1], self.end_bots[key][0]
+                row, col = self.end_bots[key][1], self.end_bots[key][0]  # TODO: verify x, y order
             else:
                 print("Generating random goal location for robot ", key)
-                x, y = self.get_empty_spot()
-                self.end_bots[key] = [y, x]
-                self.end_bots[key] = [y, x]
-            f.write(str(x) + '\t' + str(y) + '\t')
+                row, col = self.get_empty_spot() # TODO: verify x, y order
+                self.end_bots[key] = [row, col]
+                self.end_bots[key] = [row, col]
+            f.write(str(col) + '\t' + str(row) + '\t')
             # optimal distance to goal
             # NOTE!!! we don't need to switch start location x and y
             # because it is already saved in self.bots as required (y,x)
-            print(f'{(value[0], value[1]), (y, x)}')
-            f.write(f'{self.get_optimal_length((value[0], value[1]), (y, x))}\n')
+            f.write(f'{self.get_optimal_length((value[0], value[1]), (row, col))}\n')
         f.close()
         self.has_paths = False
         print("Scenario file generated (.scen file)")
@@ -622,14 +641,16 @@ class Grid:
         while True:  # choose within borders of arena, not the 12x12 TODO: modify after removing borders
             try_x = random.randint(self.x_range[0], self.x_range[1])
             try_y = random.randint(self.y_range[0], self.y_range[1])
-            if self.grid[try_y][try_x] != 0:
+            try_grid_cell = self.cell_to_grid_cell((try_y, try_x))
+
+            if self.grid[try_grid_cell[0]][try_grid_cell[1]] != 0:
                 continue
             for coord in self.endspots:  # make sure no two goal locations are aligned
-                if coord[1] == try_x and coord[0] == try_y:
+                if coord[1] == try_grid_cell[1] and coord[0] == try_grid_cell[0]:
                     continue
             break
-        self.endspots.append([try_y, try_x])
-        return try_x, try_y
+        self.endspots.append([try_grid_cell[0], try_grid_cell[1]])
+        return try_grid_cell
 
     def get_optimal_length(self, loc1, loc2):
         """
@@ -667,8 +688,8 @@ class Grid:
         neighbors = []
         for move in moves:
             new_loc = np.array(loc) + move
-            if 0 <= new_loc[0] <= self.cols-1 and \
-                    0 <= new_loc[1] <= self.rows-1 and \
+            if 0 <= new_loc[0] <= self.rows-1 and \
+                    0 <= new_loc[1] <= self.cols-1 and \
                     self.grid[new_loc[0]][new_loc[1]] == 0:
                 neighbors.append(tuple(new_loc))
 
@@ -703,7 +724,7 @@ class Grid:
             self.grid[grid_cell[0]][grid_cell[1]] = CellVal.ROBOT_FULL.value
         elif self.grid[grid_cell[0]][grid_cell[1]] == CellVal.OBSTACLE_REAL.value:
             self.grid[grid_cell[0]][grid_cell[1]] = CellVal.COLLISION.value
-        self.bots[robot_id] = [mode_cell[0], mode_cell[1]]
+        self.bots[robot_id] = [grid_cell[0], grid_cell[1]]
 
 
 if __name__ == "__main__":

@@ -82,7 +82,7 @@ def set_buttons(surface, grid_bottom_left):
     """
     buttons_size = (110, 70)
     left_gep = 10
-    top_gap = 40
+    top_gap = 50
     buttons = {
         "random_scene": Button(text=['Make Random', 'Scene'],
                                pos=(LEFT_SCREEN_ALIGNMENT, grid_bottom_left + top_gap),
