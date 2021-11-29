@@ -106,7 +106,7 @@ class Grid:
         self.bot_boxes = []  # all the text boxes representing robots
         self.end_boxes = []  # all the text boxes representing the robots' end locations
 
-    def place_cells(self):
+    def place_objects_on_grid(self):
         """
         adding colored object to grid, based on the cell's status
         """
@@ -124,14 +124,35 @@ class Grid:
                 # is the grid cell tiled ?
                 if self.grid[row][column] != CellVal.EMPTY.value:
                     # if the cell is not empty, then we place a colored tile in it
-                    robot_id = -1 if self.grid[row][column] != CellVal.ROBOT_FULL.value else 1
-                    # TODO: find robot in position if necessary
+                    robot_id = self.find_robot_in_loc((row, column))
+                    x = self.screen_grid_origin[0] + (self.cell_dim * column) + self.line_width + cell_border
+                    y = self.screen_grid_origin[1] + (self.cell_dim * row) + self.line_width + cell_border
                     self.draw_square_cell(
-                        x=self.screen_grid_origin[0] + (self.cell_dim * column) + self.line_width + cell_border,
-                        y=self.screen_grid_origin[1] + (self.cell_dim * row) + self.line_width + cell_border,
-                        tile_dim=tile_dim, cell_color=self.colors[self.grid[row][column]], robot_id=robot_id)
+                        x=x, y=y, tile_dim=tile_dim, cell_color=self.colors[self.grid[row][column]], robot_id=robot_id)
+                    # print robot id to screen if cell is goal
+                    if self.grid[row][column] == CellVal.GOAL.value:
+                        robot_id = list(filter(lambda key: self.end_bots[key][0] == row and
+                                                           self.end_bots[key][1] == column,
+                                               self.end_bots.keys()))[0]
+                        font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim / 2), bold=True)
+                        text = font.render(str(robot_id), True, BLACK)  # print robot id in black
+                        text_rect = text.get_rect(center=(x + tile_dim / 2.0, y + tile_dim / 2.0))
+                        self.surface.blit(text, text_rect)
 
-    # Draw filled rectangle at coordinates
+    def find_robot_in_loc(self, loc):
+        """
+        finds a robot (if exist) in the given location (otherwise returns CellVal.EMPTY)
+        loc = (row, column)
+        """
+        if self.grid[loc[0]][loc[1]] == CellVal.ROBOT_FULL.value:
+            robot_id = list(filter(lambda key: self.bots[key][0] == loc[0] and self.bots[key][1] == loc[1],
+                                   self.bots.keys()))[0]
+            return robot_id
+        else:
+            return CellVal.EMPTY.value
+
+
+# Draw filled rectangle at coordinates
     def draw_square_cell(self, x, y, tile_dim, cell_color, robot_id=-1):
         """
         draws a single colored tile in a grid cell
@@ -141,13 +162,12 @@ class Grid:
             (x, y, tile_dim, tile_dim)
         )
 
-        if robot_id > -1:
-            # TODO: fix id size and position
-            # TODO: pass correct robot id to method
+        # draw robot id if cell contains a robot
+        if robot_id != CellVal.EMPTY.value:
             # this is a tile for a robot - print robot id
-            font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim/2))
+            font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim/2), bold=True)
             text = font.render(str(robot_id), True, BLACK)  # print robot id in black
-            text_rect = text.get_rect(center=(x, y))
+            text_rect = text.get_rect(center=(x + tile_dim / 2.0, y + tile_dim / 2.0))
             self.surface.blit(text, text_rect)
 
     def draw_grid(self):
@@ -183,7 +203,6 @@ class Grid:
             (grid_width + cont_x,
              grid_height + cont_y), self.line_width)
 
-        # TODO: maybe draw lab's coordinates in light gray and row-cols in black
         # VERTICAL DIVISIONS (draw vertical lines in grid)
         for col in range(self.cols):
             pygame.draw.line(
@@ -225,7 +244,6 @@ class Grid:
                 center=(LEFT_SCREEN_ALIGNMENT - 10, cont_y + row * self.cell_dim + self.cell_dim / 2))
             self.surface.blit(text, text_rect)
 
-
     def reset_grid(self):
         """
         Resets the grid so that all values are 0 (meaning nothing is in the box)
@@ -257,7 +275,7 @@ class Grid:
         """
         set_coords = []
         for mi, marker_pos in enumerate(marker_positions):
-            loc = [marker_pos.x, marker_pos.y]  # TODO: change to tuple
+            loc = [marker_pos.x, marker_pos.y]
             set_coords.append(loc)
         return set_coords
 
@@ -638,7 +656,7 @@ class Grid:
         Returns a random empty cell on the grid.
         Also checks that it has not been generated before.
         """
-        while True:  # choose within borders of arena, not the 12x12 TODO: modify after removing borders
+        while True:  # choose within borders of arena (in lab's coords, later translated to grid coords)
             try_x = random.randint(self.x_range[0], self.x_range[1])
             try_y = random.randint(self.y_range[0], self.y_range[1])
             try_grid_cell = self.cell_to_grid_cell((try_y, try_x))

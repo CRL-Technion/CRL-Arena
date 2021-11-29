@@ -40,6 +40,7 @@ class PlannerController():
                          algorithm_output=self.algorithm_output,
                          paths_filename=self.paths_filename,
                          surface=surface)
+        self.grid.reset_grid()
 
     def set_grid(self):
         """
@@ -54,13 +55,13 @@ class PlannerController():
 
         # (robot_id, MarkersSet)
         robots = [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
-        self.grid.reset_grid()  # TODO: understand how to re-draw (update) without resetting every time
+
         self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
         self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
 
         self.grid.surface.fill((245, 245, 245))  # fill screen background with light-gray color
         self.grid.draw_grid()
-        self.grid.place_cells()
+        self.grid.place_objects_on_grid()
 
         # if 'run planner' button is clicked, then running the planner one time
         if self.grid.run_planner_cond:
