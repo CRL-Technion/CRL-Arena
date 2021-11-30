@@ -135,12 +135,15 @@ class Grid:
                         robot_id = list(filter(lambda key: self.end_bots[key][0] == row and
                                                            self.end_bots[key][1] == column,
                                                self.end_bots.keys()))[0]
-                        font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim / 2), bold=True)
-                        text = font.render(str(robot_id), True, BLACK)  # print robot id in black
-                        text_rect = text.get_rect(center=self.get_grid_cell_center_on_screen((row, column)))
-                        self.surface.blit(text, text_rect)
+                        self.print_text_on_screen(text=str(robot_id),
+                                                  loc_on_screen=self.get_grid_cell_center_on_screen((row, column)),
+                                                  font_size=int(self.cell_dim / 2), font='Comic Sans MS', color=BLACK,
+                                                  bold=True)
 
     def draw_paths(self):
+        """
+        draws the solution paths to the screen
+        """
         for agent_id_str, path in self.solution_paths_on_grid.items():
             for i in range(len(path) - 1):
                 # going over sequential steps on the path
@@ -149,6 +152,9 @@ class Grid:
                 pygame.draw.line(self.surface, PATH_COLOR, (curr_x, curr_y), (next_x, next_y), self.line_width)
 
     def get_grid_cell_center_on_screen(self, grid_cell):
+        """
+        finds the location on the pyGame screen in which a center of a given cell is located
+        """
         row, column = grid_cell
         x = self.screen_grid_origin[0] + (self.cell_dim * column) + self.line_width + self.cell_dim / 2
         y = self.screen_grid_origin[1] + (self.cell_dim * row) + self.line_width + self.cell_dim / 2
@@ -167,8 +173,6 @@ class Grid:
         else:
             return CellVal.EMPTY.value
 
-
-# Draw filled rectangle at coordinates
     def draw_square_cell(self, x, y, tile_dim, cell_color, robot_id=-1):
         """
         draws a single colored tile in a grid cell
@@ -181,10 +185,10 @@ class Grid:
         # draw robot id if cell contains a robot
         if robot_id != CellVal.EMPTY.value:
             # this is a tile for a robot - print robot id
-            font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim/2), bold=True)
-            text = font.render(str(robot_id), True, BLACK)  # print robot id in black
-            text_rect = text.get_rect(center=(x + tile_dim / 2.0, y + tile_dim / 2.0))
-            self.surface.blit(text, text_rect)
+            self.print_text_on_screen(text=str(robot_id),
+                                      loc_on_screen=(x + tile_dim / 2.0, y + tile_dim / 2.0),
+                                      font_size=int(self.cell_dim / 2), font='Comic Sans MS', color=BLACK,
+                                      bold=True)
 
     def draw_grid(self):
         """
@@ -226,18 +230,20 @@ class Grid:
                 (cont_x + (self.cell_dim * col), cont_y),
                 (cont_x + (self.cell_dim * col), grid_height + cont_y), 2)
 
-            # print columns number to screen
+            # print columns number to screen (in grid and lab's coordinates)
+            # number is placed in the center of the cell under the bottom of the grid
             x_range = [i for i in range(self.x_range[0], self.x_range[1] + 1)]  # +1 to include last column
-            font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim / 2))
-            text = font.render(str(col), True, BLACK)
-            # number is placed in the center of the cell under the bottom of the grid
-            text_rect = text.get_rect(center=(cont_x + col * self.cell_dim + self.cell_dim / 2, self.bottomleft + 10))
-            self.surface.blit(text, text_rect)
+            # grid coords in black
+            self.print_text_on_screen(text=str(col),
+                                      loc_on_screen=(cont_x + col * self.cell_dim + self.cell_dim / 2,
+                                                     self.bottomleft + 10),
+                                      font_size=int(self.cell_dim / 2), font='Comic Sans MS', color=BLACK)
+            # lab coords in gray
+            self.print_text_on_screen(text=str(x_range[col]),
+                                      loc_on_screen=(cont_x + col * self.cell_dim + self.cell_dim / 2,
+                                                     self.bottomleft + 30),
+                                      font_size=int(self.cell_dim / 2), font='Comic Sans MS', color=GRAY)
 
-            text = font.render(str(x_range[col]), True, GRAY)
-            # number is placed in the center of the cell under the bottom of the grid
-            text_rect = text.get_rect(center=(cont_x + col * self.cell_dim + self.cell_dim / 2, self.bottomleft + 30))
-            self.surface.blit(text, text_rect)
         # HORIZONTAL DIVISIONS (draw horizontal lines in grid)
         for row in range(self.rows):
             pygame.draw.line(
@@ -246,19 +252,25 @@ class Grid:
                 (cont_x + grid_width, cont_y + (self.cell_dim * row)), 2)
 
             # print rows number to screen
+            # number is placed in the center of the cell at the left side of the grid
             y_range = [i for i in range(self.y_range[0], self.y_range[1] + 1)]  # +1 to include last row
             y_range.reverse()
-            font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim / 2))
-            text = font.render(str(y_range[row]), True, GRAY)
-            # number is placed in the center of the cell under the bottom of the grid
-            text_rect = text.get_rect(center=(LEFT_SCREEN_ALIGNMENT - 30, cont_y + row * self.cell_dim + self.cell_dim / 2))
-            self.surface.blit(text, text_rect)
+            # grid coords in black
+            self.print_text_on_screen(text=str(row),
+                                      loc_on_screen=(LEFT_SCREEN_ALIGNMENT - 10,
+                                                     cont_y + row * self.cell_dim + self.cell_dim / 2),
+                                      font_size=int(self.cell_dim / 2), font='Comic Sans MS', color=BLACK)
+            # lab coords in gray
+            self.print_text_on_screen(text=str(y_range[row]),
+                                      loc_on_screen=(LEFT_SCREEN_ALIGNMENT - 30,
+                                                     cont_y + row * self.cell_dim + self.cell_dim / 2),
+                                      font_size=int(self.cell_dim / 2), font='Comic Sans MS', color=GRAY)
 
-            text = font.render(str(row), True, BLACK)
-            # number is placed in the center of the cell under the bottom of the grid
-            text_rect = text.get_rect(
-                center=(LEFT_SCREEN_ALIGNMENT - 10, cont_y + row * self.cell_dim + self.cell_dim / 2))
-            self.surface.blit(text, text_rect)
+    def print_text_on_screen(self, text, loc_on_screen, font_size, font='Comic Sans MS', color=BLACK, bold=False):
+        font = pygame.font.SysFont(font, font_size, bold=bold)
+        text = font.render(text, True, color)
+        text_rect = text.get_rect(center=loc_on_screen)
+        self.surface.blit(text, text_rect)
 
     def reset_grid(self):
         """
