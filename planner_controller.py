@@ -1,3 +1,4 @@
+import ast
 import os
 import numpy as np
 import pygame
@@ -68,6 +69,12 @@ class PlannerController():
             self.run_planner()
             self.grid.run_planner_cond = False
 
+        # draw paths to screen after solution was found (currently remains after robots start moving)
+        # first time is a bit slow because the program first sends the solution to the second computer
+        # before updating the screen
+        if self.grid.has_paths:
+            self.grid.draw_paths()
+
     def run_planner(self):
         """
         Running the MAPF planner and sending the solution to ubuntu computer if SEND_SOLUTION flag is turned on
@@ -119,25 +126,27 @@ class PlannerController():
             # get sequence of coordinates
             path_string = line[colon_idx + 2::]
             path_list = path_string.split('->')
-
             # parse and write out coordinates
             start_location = []
             counter = 0
-            for coord in path_list:
-                if coord == '\n' or coord == '':
-                    continue
-                else:
-                    coord = coord[1:-1]
-                    # this is to compensate for the flipped coordinates that the planner outputs
-                    y, x = coord.split(',')
 
-                    if all_robots_starts_at_zero_zero:
-                        if not start_location:
-                            start_location = [x, y]
-                        x = str(int(x) - int(start_location[0]))
-                        y = str(-(int(y) - int(start_location[1])))
-                    plan_file.write('\t\t- x: ' + x + '\n\t\t y: ' + y + '\n\t\t t: ' + str(counter) + '\n')
-                    counter = counter + 1
+            path_list_locs = list(filter(lambda loc: loc != '\n' and loc != '', path_list))
+
+            # save paths in class (as tuples not strings)
+            clean_path = list(map(lambda loc: ast.literal_eval(loc), path_list_locs))
+            self.grid.solution_paths_on_grid[agent_id] = clean_path
+
+            for coord in path_list_locs:
+                # this is to compensate for the flipped coordinates that the planner outputs
+                y, x = ast.literal_eval(coord)
+
+                if all_robots_starts_at_zero_zero:
+                    if not start_location:
+                        start_location = [x, y]
+                    x = str(int(x) - int(start_location[0]))
+                    y = str(-(int(y) - int(start_location[1])))
+                plan_file.write('\t\t- x: ' + x + '\n\t\t y: ' + y + '\n\t\t t: ' + str(counter) + '\n')
+                counter = counter + 1
         plan_file.close()
         paths_file.close()
 

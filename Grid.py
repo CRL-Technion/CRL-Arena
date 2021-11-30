@@ -10,7 +10,7 @@ from statistics import mode
 from matplotlib.widgets import Button
 from shapely.geometry import LineString
 
-from globals import TOP_SCREEN_ALIGNMENT, LEFT_SCREEN_ALIGNMENT, WIDTH, HEIGHT, BLACK, GRAY
+from globals import TOP_SCREEN_ALIGNMENT, LEFT_SCREEN_ALIGNMENT, WIDTH, HEIGHT, BLACK, GRAY, PATH_COLOR
 
 
 class CellVal(Enum):
@@ -96,7 +96,8 @@ class Grid:
         self.endspots = []
         self.has_paths = False
         # saves path after running the solver (for external visualization)
-        self.solution_paths_translated = {}
+        self.solution_paths_on_grid = {}
+        self.solution_paths_translated = {}  # TODO: remove and use self.solution_paths_on_grid
 
         ## Robots management parameters
         self.bots = {}  # maps bot IDs to current spot, NOTE that locations are saved as (y,x)
@@ -136,8 +137,23 @@ class Grid:
                                                self.end_bots.keys()))[0]
                         font = pygame.font.SysFont('Comic Sans MS', int(self.cell_dim / 2), bold=True)
                         text = font.render(str(robot_id), True, BLACK)  # print robot id in black
-                        text_rect = text.get_rect(center=(x + tile_dim / 2.0, y + tile_dim / 2.0))
+                        text_rect = text.get_rect(center=self.get_grid_cell_center_on_screen((row, column)))
                         self.surface.blit(text, text_rect)
+
+    def draw_paths(self):
+        for agent_id_str, path in self.solution_paths_on_grid.items():
+            for i in range(len(path) - 1):
+                # going over sequential steps on the path
+                curr_x, curr_y = self.get_grid_cell_center_on_screen(path[i])
+                next_x, next_y = self.get_grid_cell_center_on_screen(path[i+1])
+                pygame.draw.line(self.surface, PATH_COLOR, (curr_x, curr_y), (next_x, next_y), self.line_width)
+
+    def get_grid_cell_center_on_screen(self, grid_cell):
+        row, column = grid_cell
+        x = self.screen_grid_origin[0] + (self.cell_dim * column) + self.line_width + self.cell_dim / 2
+        y = self.screen_grid_origin[1] + (self.cell_dim * row) + self.line_width + self.cell_dim / 2
+
+        return x, y
 
     def find_robot_in_loc(self, loc):
         """
