@@ -22,7 +22,7 @@ class PlannerController():
         self.scene_name = arguments_parser.scene.split('.')[0]  # clean scenario name without .scen suffix
         self.paths_filename = DATA_PATH + self.scene_name + '_paths.txt'
         self.arguments_parser = arguments_parser
-        self.SEND_SOLUTION = False
+        self.SEND_SOLUTION = True
 
         # TODO: find out how to get the distance between corners (from motive data) and pass it as x_dim and y_dim
         #  to create a grid with the exact size as the arena.

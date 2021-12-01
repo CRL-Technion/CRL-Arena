@@ -178,7 +178,7 @@ def main():
             # start the server for transmit Motive data via UDP protocol.
             # we use this data to guide the robot (from the Ubuntu computer) and for visualization tools.
             server.start()
-            print("UDP server initiated, aiting 2 seconds for the system to stabilized...")
+            print("UDP server initiated, waiting 2 seconds for the system to stabilized...")
             time.sleep(2)
 
             broadcast_solution_active = True

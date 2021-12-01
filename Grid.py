@@ -116,7 +116,9 @@ class Grid:
 
         # set goal locations on grid
         for robot_id, goal_loc in self.end_bots.items():
-            self.grid[goal_loc[0]][goal_loc[1]] = CellVal.GOAL.value
+            # draw goal tile only if location is not occupied
+            if self.grid[goal_loc[0]][goal_loc[1]] == CellVal.EMPTY.value:
+                self.grid[goal_loc[0]][goal_loc[1]] = CellVal.GOAL.value
 
         # travers the grid
         for row in range(self.rows):
