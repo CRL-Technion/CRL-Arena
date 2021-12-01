@@ -32,7 +32,6 @@ class Grid:
     A class that holds a grid and can visualize this grid, export it as a map file, or export it as scene file.
     """
     def __init__(self, cell_size, rows, cols,
-                 broadcast_cond,
                  map_filename,
                  scene_filename,
                  goal_locations,
@@ -44,7 +43,6 @@ class Grid:
         cell_size: in meters
         rows: number of rows in the grid (float - convert to int)
         cols: number of columns in the grid (float - convert to int)
-        broadcast_cond: condition variable for notifing main loop on broadcast activation
         map_filename: name of .map file that is output
         scen_filename: name of .scen file that is output
         goal_locations: name of .txt file containing each robot's goal location
@@ -53,8 +51,9 @@ class Grid:
         """
 
         ## Parameters for interaction with the main loop to activate events
-        self.broadcast_cond = broadcast_cond
-        self.run_planner_cond = False
+        # TODO: this is bad practice, consider alternative approaches
+        self.broadcast_solution_init = False  # notifies to initiate solution data broadcasting
+        self.run_planner_cond = False  # notifies to run the MAPF solver
 
         ## Grid dimension and coordination parameters
         self.cell_size = cell_size  # meters
@@ -504,8 +503,7 @@ class Grid:
         Called when pressing the "Broadcast solution data" button.
         notifies the main thread to initialize data transmission via UDP.
         """
-        with self.broadcast_cond:
-            self.broadcast_cond.notify()
+        self.broadcast_solution_init = True
 
     def run_planner(self, event=None):
         """
