@@ -140,6 +140,7 @@ class Grid:
                                                   font_size=int(self.cell_dim / 2), font='Comic Sans MS', color=BLACK,
                                                   bold=True)
 
+
     def draw_paths(self):
         """
         draws the solution paths to the screen
@@ -310,11 +311,22 @@ class Grid:
         Colors all the cells that are blocked by obstacles.
         """
         for obst in obstacles:
-            obst_cord = self.get_positions_list(obst.positions)
-            blocked_cells = self.__get_blocked_cells(obst_cord)
-            for coord in blocked_cells:
-                new_coord = self.cell_to_grid_cell(coord)
-                self.grid[new_coord[0]][new_coord[1]] = CellVal.OBSTACLE_REAL.value
+            obst_cords = self.get_positions_list(obst.positions)
+
+            # check if the obstacle is out of the grid's bounds
+            # consider out of bounds if one of the markers is out of bounds
+            # this is cells in lab's coordinates for in-bound check
+            markers_to_cells = [self.xy_to_cell(coord) for coord in obst_cords]
+            in_bounds = all(self.marker_in_bound(marker_cell) for marker_cell in markers_to_cells)
+            if not in_bounds:
+                # Notify about obstacle that is out of bounds
+                print(f"At least one of obstacle --{obst.name}-- markers is out of bounds. "
+                      f"The obstacle will not be shown on the grid.")
+            else:
+                blocked_cells = self.__get_blocked_cells(obst_cords)
+                for coord in blocked_cells:
+                    new_coord = self.cell_to_grid_cell(coord)
+                    self.grid[new_coord[0]][new_coord[1]] = CellVal.OBSTACLE_REAL.value
 
     def add_robots(self, robots, tolerance=1):
         """
@@ -325,7 +337,7 @@ class Grid:
         tolerance of 2: majority of markers must be in one cell
         If the robot's configuration is outside of the specified tolerance, it will highlight all the cells the robot touches
         """
-        for id, robot_markers in robots:
+        for robot_id, robot_markers in robots:
             # calculate the grid cells that the robots markers lay within
             robot_cords = self.get_positions_list(robot_markers.positions)
             relevant_markers_cells = [self.xy_to_cell(coord) for coord in robot_cords]
@@ -334,7 +346,10 @@ class Grid:
             # consider out of bounds if one of the markers is out of bounds
             in_bounds = all(self.marker_in_bound(marker_cell) for marker_cell in relevant_markers_cells)
             if not in_bounds:
-                self.out_of_bounds_bots.append((id, relevant_markers_cells))
+                self.out_of_bounds_bots.append((robot_id, relevant_markers_cells))
+                # Notify about robot that is out of bounds
+                print(f"Robot {robot_id} is out of bounds and will not be shown in the visualization.\n"
+                      f"Its markers are located in cells: {relevant_markers_cells} (in lab's coordinates)")
 
             else:
                 # robot is in bounds.
@@ -345,27 +360,28 @@ class Grid:
 
                 if relevant_markers_cells.count(mode_cell) == len(relevant_markers_cells):
                     # all markers are in one cell
-                    self.set_cell_color(id, mode_cell)
+                    self.set_robot_cell_color(robot_id, mode_cell)
 
                 elif relevant_markers_cells.count(mode_cell) >= len(relevant_markers_cells) - 1 \
                         and tolerance == 1:
                     # all markers but one are in the same cell
                     # if tolerance is 1 then it is ok
-                    self.set_cell_color(id, mode_cell)
+                    self.set_robot_cell_color(robot_id, mode_cell)
 
                 elif relevant_markers_cells.count(mode_cell) >= majority_count and tolerance == 2:
                     # majority markers are in the same cell
                     # if tolerance is 2 then it is ok
-                    self.set_cell_color(id, mode_cell)
+                    self.set_robot_cell_color(robot_id, mode_cell)
 
                 else:
                     # the current location of the markers does not qualify as being in one cell
                     # according to the provided tolerance
-                    self.bad_bots.append(id)  # add its id to the list of bad robots
+                    self.bad_bots.append(robot_id)  # add its id to the list of bad robots
                     # highlight all the cells it touches
                     for cell in relevant_markers_cells:
                         grid_cell = self.cell_to_grid_cell(cell)  # convert to grid cell coordinates
                         self.grid[grid_cell[0]][grid_cell[1]] = CellVal.ROBOT_PARTIAL.value
+
 
     def __line_grid_intersection(self, p1, p2, dr):
         """
@@ -390,17 +406,22 @@ class Grid:
         cells = list(map(lambda p: self.xy_to_cell(p), ar))
         return cells
 
-    def process_collisions(self):
+    def check_collisions(self, grid_cell):
         """
-        If there are any robots that are overlapping with obstacles, color them with a certain color.
-        Goes through list of self bots and check theirs coordinates.
-        It checks if there is an obstacle on any of their coordinates.
-        If there is, change the cell's value to some other color.
+        Check for robot-obstacle or robot-robot collision at location grid_cell.
+        If there exists a collision, it sets the value of the cell in the grid
+        such that it would appear in collision color.
+        NOTE that we currently do not check or notify edge-collision (for visualization purposes)
         """
-        for key, value in self.bots.items():
-            if self.grid[value[0]][value[1]] == CellVal.OBSTACLE_REAL:
-                print('found collision at ', value)
-                self.grid[value[0]][value[1]] = CellVal.COLLISION
+        if self.grid[grid_cell[0]][grid_cell[1]] == CellVal.OBSTACLE_REAL.value or \
+            self.grid[grid_cell[0]][grid_cell[1]] == CellVal.ROBOT_FULL.value or \
+            self.grid[grid_cell[0]][grid_cell[1]] == CellVal.ROBOT_PARTIAL.value:
+
+            print(f'Collision at {grid_cell}!')
+            self.grid[grid_cell[0]][grid_cell[1]] = CellVal.COLLISION.value
+            return True
+        return False
+
 
     def xy_to_cell(self, loc):
         """
@@ -485,12 +506,6 @@ class Grid:
         """
         with self.broadcast_cond:
             self.broadcast_cond.notify()
-
-# TODO: add to new grid visualization methods
-# # Notify about robots that are out of bounds
-# for robot_id, markers in self.out_of_bounds_bots:
-#     print(f"Robot {robot_id} is out of bounds and will not be shown in the visualization.\n"
-#           f"Its markers are located in cells: {markers}")
 
     def run_planner(self, event=None):
         """
@@ -653,21 +668,31 @@ class Grid:
 
     def marker_in_bound(self, marker_cell):
         """
-        Checks that a marker is located within the grid's boundaries
+        Checks that a marker is located within the grid's boundaries (compares to ranges of lab's coordinates)
         """
         # TODO: verify x and y correctness
         return (self.y_range[1] >= marker_cell[0] >= self.y_range[0]) \
                and (self.x_range[1] >= marker_cell[1] >= self.x_range[0])
 
-    def set_cell_color(self, robot_id, mode_cell):
+    def set_robot_cell_color(self, robot_id, mode_cell):
         """
         Sets a robot's cell color according to the actual situation
         """
         grid_cell = self.cell_to_grid_cell(mode_cell)  # convert to grid cell coordinates
-        if self.grid[grid_cell[0]][grid_cell[1]] == CellVal.EMPTY.value:
-            self.grid[grid_cell[0]][grid_cell[1]] = CellVal.ROBOT_FULL.value
-        elif self.grid[grid_cell[0]][grid_cell[1]] == CellVal.OBSTACLE_REAL.value:
-            self.grid[grid_cell[0]][grid_cell[1]] = CellVal.COLLISION.value
+
+        # first, check if we have a collision with obstacle or other robot (that already been added).
+        # NOTE that we count on that that the obstacles were processed before (call to 'add_obstacles')
+        is_collide = self.check_collisions(grid_cell)
+
+        if not is_collide:
+            # set grid cell color
+            if self.grid[grid_cell[0]][grid_cell[1]] == CellVal.EMPTY.value:
+                self.grid[grid_cell[0]][grid_cell[1]] = CellVal.ROBOT_FULL.value
+            elif self.grid[grid_cell[0]][grid_cell[1]] == CellVal.OBSTACLE_REAL.value:
+                self.grid[grid_cell[0]][grid_cell[1]] = CellVal.COLLISION.value
+
+        # otherwise, no need to change cell's color,
+        # since it has been updated inside 'check_collisions' for collision color
         self.bots[robot_id] = [grid_cell[0], grid_cell[1]]
 
 
