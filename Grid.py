@@ -279,8 +279,6 @@ class Grid:
         self.grid = []
         for i in range(int(self.rows)):
             self.grid.append([CellVal.EMPTY.value for i in range(int(self.cols))])
-        self.bots = {}
-        self.bad_bots = []
 
     def __get_blocked_cells(self, vertices_list, dr=0.01):
         """
@@ -371,7 +369,7 @@ class Grid:
 
     def __line_grid_intersection(self, p1, p2, dr):
         """
-        Being called from '__get_blocked_cells' to find intersection of line with a grid cell.
+        Being called from '__get_blocked_cells' to find intersection of line with a grid cell (in LAB's coordinates).
         """
         ls = LineString([p1, p2])
         points_on_line = []
@@ -379,8 +377,12 @@ class Grid:
         num_samples = int(line_length / dr)
         linespace = [x * dr for x in range(0, num_samples + 1)]
         for f in linespace:
-            p = ls.interpolate(f).coords[0]
+            # p_x, p_y = ls.interpolate(f).coords[0]
+            #
+            # # swhitching order of x and y because xy_to_cell needs to get thj
+            # points_on_line.append((p_y, p_x))
 
+            p = ls.interpolate(f).coords[0]
             points_on_line.append(p)
 
         ar = np.array(points_on_line, 'f')
@@ -405,7 +407,9 @@ class Grid:
         Converts x and y from Motive to new coordinate system (LAB's coordinates)
         Returns as (y, x) (later translated to (row, column))
         """
-        return -np.floor(loc[1] / self.cell_size), np.floor(loc[0] / self.cell_size)
+        # the x value we get from motive is the y value in the lab's coordinates (first in returned pair)
+        # the -y value we get from motive is the x value in the lab's coordinates (second in returned pair)
+        return np.floor(loc[0] / self.cell_size), -np.floor(loc[1] / self.cell_size)
 
     def cell_to_grid_cell(self, loc):
         new_origin = (self.y_range[1], self.x_range[0])  # loc is already (y, x) in lab's coords

@@ -22,7 +22,7 @@ class PlannerController():
         self.scene_name = arguments_parser.scene.split('.')[0]  # clean scenario name without .scen suffix
         self.paths_filename = DATA_PATH + self.scene_name + '_paths.txt'
         self.arguments_parser = arguments_parser
-        self.SEND_SOLUTION = True
+        self.SEND_SOLUTION = False
 
         # TODO: find out how to get the distance between corners (from motive data) and pass it as x_dim and y_dim
         #  to create a grid with the exact size as the arena.
@@ -57,6 +57,7 @@ class PlannerController():
         # (robot_id, MarkersSet)
         robots = [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
 
+        self.grid.reset_grid()  # TODO: find a way to clean grid objject inplace instead of reset every cycle
         self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
         self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
 

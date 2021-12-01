@@ -112,7 +112,7 @@ def set_buttons(surface, grid_bottom_left):
                                      grid_bottom_left + top_gap),
                                 size=buttons_size, color=BROADCAST_BUTTON_COLOR,
                                 surface=surface,
-                                font_size=14)
+                                font_size=BUTTON_BASE_FONT_SIZE - 2)
     }
 
     return buttons
@@ -133,7 +133,7 @@ def main():
 
     ########################################
     # Mockup listener for offline tests
-    listener = mockup.simple_listener_mock
+    #listener = mockup.simple_listener_mock
     # comment out to run online with Motive listener
     ########################################
 

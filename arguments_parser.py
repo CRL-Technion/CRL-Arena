@@ -19,7 +19,7 @@ class ArgumentsParser:
         args = parser.parse_args()
 
         self.cell_size = 0.3 if not args.cell else float(args.cell)
-        self.height = 4.5 if not args.height else float(args.height)
+        self.height = 3.0 if not args.height else float(args.height)
         self.width = 6.0 if not args.width else float(args.width)
 
         self.goals = "" if not args.goals else args.goals
