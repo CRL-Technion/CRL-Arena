@@ -335,6 +335,7 @@ class Grid:
         tolerance of 2: majority of markers must be in one cell
         If the robot's configuration is outside of the specified tolerance, it will highlight all the cells the robot touches
         """
+        self.bad_bots = []
         for robot_id, robot_markers in robots:
             # calculate the grid cells that the robots markers lay within
             robot_cords = self.get_positions_list(robot_markers.positions)
