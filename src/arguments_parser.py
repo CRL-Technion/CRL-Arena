@@ -1,4 +1,4 @@
-from demo_config import DEMO_ARENA_CONFIG
+from src.demo_config import DEMO_ARENA_CONFIG
 
 
 class ArgumentsParser:

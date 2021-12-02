@@ -8,7 +8,7 @@ from enum import Enum
 from statistics import mode
 from shapely.geometry import LineString
 
-from globals import TOP_SCREEN_ALIGNMENT, LEFT_SCREEN_ALIGNMENT, WIDTH, HEIGHT, BLACK, GRAY, PATH_COLOR
+from src.globals import TOP_SCREEN_ALIGNMENT, LEFT_SCREEN_ALIGNMENT, WIDTH, HEIGHT, BLACK, GRAY, PATH_COLOR
 
 
 class CellVal(Enum):

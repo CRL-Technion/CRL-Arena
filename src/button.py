@@ -1,6 +1,6 @@
 import pygame
 
-from globals import HOVER_GRAY_COLOR, BLACK
+from src.globals import HOVER_GRAY_COLOR, BLACK
 
 
 class Button:

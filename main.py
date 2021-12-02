@@ -4,16 +4,16 @@ import json
 import argparse
 import pygame
 
-import mockup
+from src.arguments_parser import ArgumentsParser
+import src.mockup
 
-from arguments_parser import ArgumentsParser
-from button import Button
-from globals import SCREENSIZE, LEFT_SCREEN_ALIGNMENT, BUTTON_BASE_FONT_SIZE, GEN_SCENE_BUTTON_COLOR, \
+from src.button import Button
+from src.globals import SCREENSIZE, LEFT_SCREEN_ALIGNMENT, BUTTON_BASE_FONT_SIZE, GEN_SCENE_BUTTON_COLOR, \
     RUN_PLANNER_BUTTON_COLOR, BROADCAST_BUTTON_COLOR
 from natnet.protocol import MarkerSetType
-from udp_server import UDPServer
-from Listener import Listener, ListenerType
-from planner_controller import PlannerController
+from src.udp_server import UDPServer
+from src.Listener import Listener, ListenerType
+from src.planner_controller import PlannerController
 
 
 def get_robots_state_to_send(robots_bodies, solution_paths, corners):

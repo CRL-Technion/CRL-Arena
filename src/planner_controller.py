@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pygame
 
-from Grid import Grid
+from src.Grid import Grid
 from natnet.protocol import MarkerSetType
 
 DATA_PATH = "data/"  # TODO: move to shared "util" files for global variables or make a class variable
