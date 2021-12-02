@@ -9,7 +9,7 @@ class ArgumentsParser:
         parser.add_argument("-w", "--width", type=float, help="Grid width (in meters), default is 6m")
         parser.add_argument("--config", type=str, help="Choose a built-in arena dimensions from the "
                                                        "option in 'demp_config.py' file. \n"
-                                                       "SMALL := 2x2, MEDIUM := 3x6, LARGE := 6x8 (height x width),"
+                                                       "SMALL := 2.5x2.5, MEDIUM := 3x6, LARGE := 4.5x7 (height x width),"
                                                        "with cell size 0.3m.\n"
                                                        "Ignores any other arena configurations that where provided.")
 
