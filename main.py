@@ -2,12 +2,9 @@ import sys
 import time
 import json
 import argparse
-
 import pygame
 
 import mockup
-
-from threading import Condition
 
 from arguments_parser import ArgumentsParser
 from button import Button
@@ -65,11 +62,11 @@ def check_events(buttons, grid):
         if event.type == pygame.MOUSEBUTTONDOWN:
             # if the mouse is clicked on a - capture which one and activate relevant function
             if buttons["random_scene"].is_hover():
-                grid.make_scen()
+                grid.init_random_scene()
             elif buttons["goals_from_scene"].is_hover():
-                grid.init_from_scene()
+                grid.init_goals_from_scene()
             elif buttons["goals_from_file"].is_hover():
-                grid.init_from_file()
+                grid.init_goals_from_file()
             elif buttons["run_planner"].is_hover():
                 grid.run_planner()
             elif buttons["broadcast"].is_hover():

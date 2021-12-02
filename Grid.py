@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import astar
 import random
@@ -7,7 +6,6 @@ import pygame
 
 from enum import Enum
 from statistics import mode
-from matplotlib.widgets import Button
 from shapely.geometry import LineString
 
 from globals import TOP_SCREEN_ALIGNMENT, LEFT_SCREEN_ALIGNMENT, WIDTH, HEIGHT, BLACK, GRAY, PATH_COLOR
@@ -141,7 +139,6 @@ class Grid:
                                                   font_size=int(self.cell_dim / 2), font='Comic Sans MS', color=BLACK,
                                                   bold=True)
 
-
     def draw_paths(self):
         """
         draws the solution paths to the screen
@@ -179,10 +176,7 @@ class Grid:
         """
         draws a single colored tile in a grid cell
         """
-        pygame.draw.rect(
-            self.surface, cell_color,
-            (x, y, tile_dim, tile_dim)
-        )
+        pygame.draw.rect(self.surface, cell_color, (x, y, tile_dim, tile_dim))
 
         # draw robot id if cell contains a robot
         if robot_id != CellVal.EMPTY.value:
@@ -269,6 +263,9 @@ class Grid:
                                       font_size=int(self.cell_dim / 2), font='Comic Sans MS', color=GRAY)
 
     def print_text_on_screen(self, text, loc_on_screen, font_size, font='Comic Sans MS', color=BLACK, bold=False):
+        """
+        A method for printing text to screen using pyGame objects
+        """
         font = pygame.font.SysFont(font, font_size, bold=bold)
         text = font.render(text, True, color)
         text_rect = text.get_rect(center=loc_on_screen)
@@ -383,7 +380,6 @@ class Grid:
                         grid_cell = self.cell_to_grid_cell(cell)  # convert to grid cell coordinates
                         self.grid[grid_cell[0]][grid_cell[1]] = CellVal.ROBOT_PARTIAL.value
 
-
     def __line_grid_intersection(self, p1, p2, dr):
         """
         Being called from '__get_blocked_cells' to find intersection of line with a grid cell (in LAB's coordinates).
@@ -423,7 +419,6 @@ class Grid:
             return True
         return False
 
-
     def xy_to_cell(self, loc):
         """
         Converts x and y from Motive to new coordinate system (LAB's coordinates)
@@ -437,77 +432,168 @@ class Grid:
         new_origin = (self.y_range[1], self.x_range[0])  # loc is already (y, x) in lab's coords
         return int(np.abs(new_origin[0] - loc[0])), int(np.abs(new_origin[1] - loc[1]))
 
-    def init_from_scene(self, event=None):
+    def init_goals_from_scene(self):
         """
         Takes an existing .scen file and loads ONLY goal locations from it.
-        Note that it does not load the start locations and map, and won't create a new .scen and .map files.
-        TODO: test and verify it's working correctly
-        TODO: check validity of input (number of agents, file format) otherwise report and abort
+        Note that a new .scen and .map files will be created and overwrite already existing files with same names.
         """
         if self.scenfile != "scene.scen":
             # a scene file was given to the program
             try:
+                # read goal locations from scene
                 with open(self.scenfile, 'r') as scen_file:
                     print("Loading (ONLY) goal locations from .scen file.")
-                    print("Note that new .scen and .map files would not be generated.")
+                    print("Note that a new .scen and .map files would be generated (overwritten previous files).")
                     for line in scen_file:
-                        if line[0] == 'v':
+                        if line[0] == 'v':  # .scen file convension (skip line)
                             continue
                         data = line.split('\t')
-                        if int(data[0]) in self.bots:
-                            self.end_bots[int(data[0])] = [int(data[7]), int(data[6])]
+                        if data[0] in self.bots:
+                            if not self.check_goal_validity((int(data[7]), int(data[6])), data[0]):
+                                # proper message to user about bad goal is provided inside the check method
+                                self.end_bots = {}
+                                return
+                            else:
+                                self.end_bots[data[0]] = [int(data[7]), int(data[6])]
+                                print(f"Goal for robot {data[0]} is: ({int(data[7])}, {int(data[6])})")
+
+                    self.generate_map_file()
+                    print("Map generated (.map file)")
+                    self.generate_scen_file()
+                    print("Scene generated (.scen file)")
             except IOError as e:
-                print(f"Couldn't open file {e}.")
+                print(f"Couldn't open file: {e}.")
         else:
             # no valid .scen was given to the program
             print("No valid .scen was given to the program! \n"
                   "Use random goal locations generation or provide a valid .scen file at command line args.")
 
-    def init_from_file(self, event=None):
+    def init_goals_from_file(self):
         """
         Takes an existing .txt file with specified goal locations and initializes a scenario.
-        Note that a new .scen and .map files will be created.
-        TODO: test and verify it's working correctly
-        TODO: check validity of input (number of agents, file format) otherwise report and abort
+        Note that a new .scen and .map files will be created and overwrite already existing files with same names.
         """
         if self.end_locations_file != "":
-            # a valid goals file was given
-            with open(self.end_locations_file, 'r') as txt_file:
-                print("Loading goal locations from file and generating new scenario (.scen and .map files).")
-                for line in txt_file:
-                    data = line.split('   ')  # python doesn't recognize tab characters for some reason
-                    print("data: ", data)
-                    if int(data[0]) in self.bots:
-                        print('recognized robot', data[0])
-                        if (self.grid[int(data[2])][int(data[1])] != 0):  # if the spot isn't available
-                            print("not available")
-                            continue
-                        if (int(data[1]) >= self.x_range[1] or int(data[1]) <= self.x_range[0] or
-                                int(data[2]) >= self.y_range[1] or int(data[2]) <= self.y_range[0]):
-                            # if the cell is out of bounds
-                            print("location requested is out of bounds")
-                            continue
-                        print("coordinates for robot ", data[0], "will be ", int(data[2]), int(data[1]))
-                        self.end_bots[int(data[0])] = [int(data[2]), int(data[1])]
-            if len(self.end_bots) > 0:  # TODO: check this part is actually working correctly
-                self.make_scen(from_scratch=False)
-                print("Scene generated")
-            else:
-                print("ERROR: Scenario file could not be generated because end locations were not found "
-                      "or out of bounds.")
+            # a goals file was given
+            try:
+                with open(self.end_locations_file, 'r') as txt_file:
+                    # read goal locations from file
+                    print("Loading goal locations from file and generating new scenario (.scen and .map files).")
+                    for line in txt_file:
+                        data = line.split('   ')  # python doesn't recognize tab characters for some reason
+                        if data[0] in self.bots:
+                            if not self.check_goal_validity((int(data[2]), int(data[1])), data[0]):
+                                # proper message to user about bad goal is provided inside the check method
+                                self.end_bots = {}
+                                return
+                            else:
+                                self.end_bots[data[0]] = [int(data[2]), int(data[1])]
+                                print(f"Goal for robot {data[0]} is: ({int(data[2])}, {int(data[1])})")
+
+                self.generate_map_file()
+                print("Map generated (.map file)")
+                self.generate_scen_file()
+                print("Scene generated (.scen file)")
+
+            except IOError as e:
+                print(f"Couldn't open file: {e}.")
         else:
             # no valid goals file was given to the program
             print("No valid goals file was given to the program! \n"
                   "Use random goal locations generation or provide a valid goals file at command line args.")
 
-    def broadcast_solution(self, event=None):
+    def init_random_scene(self, from_scratch=True):
+        """
+        Generates a .scen file of the projected scenario according to the scenario file conventions.
+        Currently, we follow the conventions required to run the common benchmarks MAPF kit.
+
+        - from_scratch - specifies that new random end locations are required
+        TODO: check that this is actually what from_scratch does and that it works
+            (also when trying to get pre-defined end locations and from_scratch is False)
+        """
+
+        self.generate_map_file()
+        print("Map file generated (.map file)")
+
+        # first, warn the user that the scene file is incomplete if there are robots that aren't in cells
+        if len(self.bad_bots) > 0:
+            print("Robots with the following ID's are not aligned with a single cell "
+                  "and won't be included in the scenario file: ", self.bad_bots)
+
+        # this is relevant only if we changed the arena after already generating goal locations
+        # TODO: Not sure this is required
+        for key, value in self.end_bots.items():
+            if key not in self.bots:
+                self.end_bots.pop(key)
+
+        # set goal locations
+        robots = sorted(self.bots.items())
+        for key, value in robots:
+            if from_scratch is False and key in self.end_bots:
+                print("will pull goal location from already existing goal locations set for robot ", key)
+                # TODO: Not sure this is required
+            else:
+                print("Generating random goal location for robot ", key)
+                row, col = self.get_empty_spot()
+                self.end_bots[key] = [row, col]
+                self.end_bots[key] = [row, col]
+
+        # write scenario to .scen file
+        self.generate_scen_file()
+
+        self.has_paths = False
+        print("Scenario file generated (.scen file)")
+
+    def check_goal_validity(self, goal_loc, robot_id):
+        """
+        Checks that a goal location is in bounds and free of obstacles and other goals.
+        Expects goal location in form (row, column).
+        """
+        row, col = goal_loc
+        if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
+            print(f"Goal location for robot {robot_id} is out of bounds... Abort!")
+            return False
+        elif self.grid[row][col] != 0:
+            print(f"Goal location for robot {robot_id} is not available... Abort!")
+            return False
+        elif [row, col] in self.end_bots.values():
+            print(f"Goal location for robot {robot_id} is already used for another robot... Abort!")
+            return False
+
+        return True
+
+
+
+    def generate_scen_file(self):
+        """
+        Generates a .scen file with all scenario data, given that goal locations already been chosen
+        (either randomly, from .scen or file)
+        """
+        robots = sorted(self.bots.items())
+        with open(self.scenfile, "w") as f:
+            f.write("version 1\n")  # scenario file convention
+            for key, value in robots:
+                # bucket
+                f.write(str(key)+'\t')
+                # .map file name
+                f.write(str(self.mapfile) + '\t')
+                # dimensions of the grid
+                f.write(str(int(self.rows)) + '\t' + str(int(self.cols)) + '\t')
+                # start location
+                f.write(str(value[1]) + '\t' + str(value[0]) + '\t')  # row, column
+                # goal location
+                row, col = self.end_bots[key]
+                f.write(str(col) + '\t' + str(row) + '\t')
+                f.write(f'{self.get_optimal_length((value[0], value[1]), (row, col))}\n')
+
+    def broadcast_solution(self):
         """
         Called when pressing the "Broadcast solution data" button.
         notifies the main thread to initialize data transmission via UDP.
         """
         self.broadcast_solution_init = True
 
-    def run_planner(self, event=None):
+    def run_planner(self):
         """
         Turns on the flag that tells the PlannerController loop to run the planner.
         TODO: not the ideal way to notify on async event from a different class,
@@ -515,7 +601,7 @@ class Grid:
         """
         self.run_planner_cond = True
 
-    def __make_map(self):
+    def generate_map_file(self):
         """
         Generates a .map file of the projected scenario according to the map file conventions.
         Currently, we follow the conventions required to run the common benchmarks MAPF kit.
@@ -535,62 +621,6 @@ class Grid:
                     else:
                         f.write('.')  # free cell
                 f.write('\n')
-
-    def make_scen(self, from_scratch=True, event=None):
-        """
-        Generates a .scen file of the projected scenario according to the scenario file conventions.
-        Currently, we follow the conventions required to run the common benchmarks MAPF kit.
-
-        - from_scratch - specifies that a new random end locations are required
-        TODO: check that this is actually what from_scratch does and that it works
-            (also when trying to get pre-defined end locations and from_scratch is False)
-        """
-
-        self.__make_map()
-        print("Map file generated (.map file)")
-
-        # first, warn the user that the scene file is incomplete if there are robots that aren't in cells
-        if len(self.bad_bots) > 0:
-            print("Robots with the following ID's are not aligned with a single cell "
-                  "and won't be included in the scenario file: ", self.bad_bots)
-
-        # for each ROBOT on the grid (meaning its grid value is 1), add a line to the scenario file with all its info
-        f = open(self.scenfile, "w")
-        f.write("version 1\n")  # scenario file convention
-
-        # this is relevant only if we changed the arena after already generating goal locations
-        for key, value in self.end_bots.items():
-            if key not in self.bots:
-                self.end_bots.pop(key)
-
-        items = sorted(self.bots.items())
-        for key, value in items:
-            # bucket
-            f.write(str(key)+'\t')
-            # .map file name
-            f.write(str(self.mapfile) + '\t')
-            # dimensions of the grid
-            f.write(str(int(self.rows)) + '\t' + str(int(self.cols)) + '\t')
-            # start location
-            f.write(str(value[1]) + '\t' + str(value[0]) + '\t')  # row, column
-            # goal location
-            # if there is already a prepared goal location in the dictionary waiting for use
-            if (from_scratch == False) and key in self.end_bots:
-                print("will pull goal location from already existing goal locations set for robot ", key)
-                row, col = self.end_bots[key][1], self.end_bots[key][0]  # TODO: verify x, y order
-            else:
-                print("Generating random goal location for robot ", key)
-                row, col = self.get_empty_spot() # TODO: verify x, y order
-                self.end_bots[key] = [row, col]
-                self.end_bots[key] = [row, col]
-            f.write(str(col) + '\t' + str(row) + '\t')
-            # optimal distance to goal
-            # NOTE!!! we don't need to switch start location x and y
-            # because it is already saved in self.bots as required (y,x)
-            f.write(f'{self.get_optimal_length((value[0], value[1]), (row, col))}\n')
-        f.close()
-        self.has_paths = False
-        print("Scenario file generated (.scen file)")
 
     def get_empty_spot(self):
         """

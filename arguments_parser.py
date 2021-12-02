@@ -15,10 +15,14 @@ class ArgumentsParser:
 
         # scenario args
         parser.add_argument("-g", "--goals", help="Goals location file name for loading defined goals.")
-        parser.add_argument("-m", "--map", help="A name for the map (.map) file that is generated for the given run."
-                                                "If not specified, default is 'map.map'")
+        parser.add_argument("-m", "--map", help="A name for the map (.map) file that is generated for the "
+                                                "given execution. If not specified, default is 'map.map'.\n"
+                                                "Note that if a file with the same name already exists, "
+                                                "it'll be overwritten.")
         parser.add_argument("-s", "--scene", help="A name for the scenario (.scen) file that is generated for the "
-                                                  "given run. If not specified, default is 'scene.scen'")
+                                                  "given execution. If not specified, default is 'scene.scen'.\n"
+                                                  "Note that if a file with the same name already exists, "
+                                                  "it'll be overwritten.")
 
         # solver args
         parser.add_argument("-S", "--solver", help="A complete command for executing the MAPF solver, "
