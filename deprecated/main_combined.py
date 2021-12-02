@@ -4,6 +4,7 @@ from Listener import Listener, ListenerType
 from udp_server import UDPServer
 import json
 import sys
+import os
 
 
 from Grid import Grid
@@ -16,9 +17,9 @@ listener = Listener(ListenerType.Local)
 if len(sys.argv) == 2:
     grid = Grid(cell_size = float(sys.argv[1]))
 elif CELL_SIZE == None:
-    grid = Grid(plan_filename="data/algorithm_output")
+    grid = Grid(plan_filename="../data/algorithm_output")
 else:
-    grid = Grid(cell_size = CELL_SIZE, plan_filename="data/algorithm_output")
+    grid = Grid(cell_size = CELL_SIZE, plan_filename="../data/algorithm_output")
 grid.plot_init_heatmap()
 
 # start the Natnet listener (receives data from Motive)
@@ -29,12 +30,21 @@ server = UDPServer()
 server.start()
 
 planner_udp = True #true is planner; false is UDP
+udp_freq = 1 #defines sleep period between data transmissions
 
+corners_tosend = []
 # the main loop for plotting the environment
+to_file = True
 while True:
     bodies = listener.bodies  # pull bodies from natnet multicast
     marker_sets = listener.marker_sets  # also pull markersets
     if planner_udp: #if we are in "planner mode"
+        if to_file:
+            to_file = False
+            with open("mock_bodies.txt", 'w') as f:
+                f.write(str(listener.bodies))
+            with open("mock_markers.txt", 'w') as f:
+                f.write(str(listener.marker_sets))
         corners = []
         grid.reset_grid()
         for ms in marker_sets:
@@ -52,12 +62,13 @@ while True:
                 set_coords.append(loc)
             grid.add_body(body_type, set_coords, tolerance=0) #add robots and obstacles
         grid.process_corners(corners)
-        time.sleep(1)
+        corners_tosend = corners
+        #time.sleep(1)
         grid.plot_render()
         if grid.has_paths: #if we have planned something and are now ready to UDP broadcast
             print("***SWITCHING TO UDP IN 3 SECONDS***")
             grid.plot_render()
-            time.sleep(3)
+            time.sleep(1)
             planner_udp = False
     else:
         to_send = []
@@ -75,6 +86,8 @@ while True:
                 to_send.append(body_dict)
         #sort so that robots are processed in numerical order
         sorted_tosend = sorted(to_send, key=lambda k: k['body_id'])
+        sorted_tosend.append(grid.solution_paths_translated)
+        sorted_tosend.append(corners_tosend)
         server.update_data(json.dumps(sorted_tosend))
-        time.sleep(.1)
+        time.sleep(udp_freq)
 

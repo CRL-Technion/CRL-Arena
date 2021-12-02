@@ -1,0 +1,20 @@
+## SCREEN SIZE AND DIMENSIONS
+BASE_SCREENSIZE = BASE_WIDTH, BASE_HEIGHT = 800.0, 600.0  # used for scaling objects' sizes on screen, do not change!
+SCREENSIZE = WIDTH, HEIGHT = 800, 600  # change this to change the window size
+LEFT_SCREEN_ALIGNMENT = 40
+TOP_SCREEN_ALIGNMENT = 40
+
+## COLORS
+BLACK = (0, 0, 0)
+GRAY = (160, 160, 160)
+GEN_SCENE_BUTTON_COLOR = (173, 216, 230)
+RUN_PLANNER_BUTTON_COLOR = (255, 153, 18)
+BROADCAST_BUTTON_COLOR = (102, 205, 0)
+HOVER_GRAY_COLOR = (130, 130, 130)
+PATH_COLOR = (0, 120, 220)
+
+## STYLE
+# Buttons - used for scaling buttons' sizes on screen, do not change!
+BUTTON_BASE_FONT_SIZE = 14.0
+BUTTON_BASE_WIDTH = 110.0
+BUTTON_BASE_HEIGHT = 70.0

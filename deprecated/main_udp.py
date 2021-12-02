@@ -39,7 +39,6 @@ def euler_from_quaternion(quat):
 
 
     return numpy.degrees(pitch), numpy.degrees(yaw), numpy.degrees(roll)
-    return roll, pitch, yaw
 
 
 
@@ -77,8 +76,7 @@ while True:
             body_dict['position']['x'] = body_dict['position']['y'] * -1
             body_dict['position']['y'] = temp_x
             # print("x: ", body_dict['position']['x'], "y: ", body_dict['position']['y'])
-            to_send.append(body_dict)
     # print("what is being sent via UDP: ", to_send)
     sorted_tosend = sorted(to_send, key=lambda k: k['body_id'])
     server.update_data(json.dumps(sorted_tosend))
-    time.sleep(.1)
+    time.sleep(0.1)

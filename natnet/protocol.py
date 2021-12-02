@@ -1,5 +1,7 @@
 ﻿import struct
 
+from enum import Enum
+
 # Structs object types
 ShortValue = struct.Struct('<h')
 IntValue = struct.Struct('<i')
@@ -12,6 +14,13 @@ Vector3 = struct.Struct('<fff')
 Quaternion = struct.Struct('<ffff')
 VERSION = 'BBBB'
 
+
+class MarkerSetType(Enum):
+    NoType = 0  # default type for backward compatibility, consider removing if not necessary
+    Corner = 1
+    Obstacle = 2
+    Robot = 3
+    All = 4
 
 class Version(object):
     """
@@ -109,17 +118,20 @@ class MarkerSet(object):
     Attributes:
         name (str): the marker set name
         positions (list[:class:`Position`]): a list of marker positions position
+        type: an enum specifies the marker set type (obstacle, robot, corner, etc.)
     """
-    def __init__(self, name, positions):
+    def __init__(self, name, positions, type=MarkerSetType.NoType):
         self.name = name
         self.positions = positions
+        self.type = type
 
     def __repr__(self):
         return 'MarkerSet(name={}, positions={})'.format(self.name, self.positions)
 
     def to_dict(self):
         return {"name": self.name,
-            "positions": [p.to_dict() for p in self.positions]}
+                "type": self.type,
+                "positions": [p.to_dict() for p in self.positions]}
 
 
 
@@ -388,7 +400,8 @@ class Protocol(object):
             # print('Model Name: {}'.format(model_name))
 
             shift, positions = self.unpack_positions(data[offset:])
-            marker_sets.append(MarkerSet(model_name, positions))
+            ms_type = self.get_markerset_type_from_name(model_name)  # TODO: test against real data from motive
+            marker_sets.append(MarkerSet(model_name, positions, ms_type))
             offset += shift
 
         return offset, marker_sets
@@ -591,3 +604,16 @@ class Protocol(object):
         data += command_string.encode('utf-8')
         data += b'\0'
         return data
+
+    def get_markerset_type_from_name(self, model_name):
+        name_lower = model_name.lower()
+        if "obst" in name_lower:
+            return MarkerSetType.Obstacle
+        elif "corner" in name_lower:
+            return MarkerSetType.Corner
+        elif "all" in name_lower:
+            return MarkerSetType.All
+        else:
+            # TODO: consider defining the names of robots in motive with suffix 'Robot_' and then change the
+            #  condition here, where default value is MarkerSetType.NoType
+            return MarkerSetType.Robot

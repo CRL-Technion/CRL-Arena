@@ -193,6 +193,9 @@ class MotionClient(object):
 
         # drop membership
         try:
+            # TODO: something here is not working and the listener is not being closed correctly
+            #       it is possible that this is why the program is not terminated uopn exit
+            #       (even when calling listener.stop() in main)
             membership = socket.inet_aton(self._multicast_ip) + socket.inet_aton('0.0.0.0')
             data_socket.setsockopt(socket.SOL_IP, socket.IP_DROP_MEMBERSHIP, membership)
         except socket.error:

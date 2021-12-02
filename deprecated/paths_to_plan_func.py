@@ -1,5 +1,5 @@
-PATHS_FILE = 'data/paths.txt'
-PLAN_FILE = 'data/plan.txt'
+PATHS_FILE = '../data/paths.txt'
+PLAN_FILE = '../data/plan.txt'
 
 
 def paths_to_plan(paths=PATHS_FILE, plan=PLAN_FILE):
