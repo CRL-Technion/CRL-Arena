@@ -9,7 +9,8 @@ import src.mockup
 
 from src.button import Button
 from src.globals import SCREENSIZE, LEFT_SCREEN_ALIGNMENT, BUTTON_BASE_FONT_SIZE, GEN_SCENE_BUTTON_COLOR, \
-    RUN_PLANNER_BUTTON_COLOR, BROADCAST_BUTTON_COLOR
+    RUN_PLANNER_BUTTON_COLOR, BROADCAST_BUTTON_COLOR, BASE_WIDTH, BUTTON_BASE_WIDTH, WIDTH, BUTTON_BASE_HEIGHT, \
+    BASE_HEIGHT, HEIGHT
 from natnet.protocol import MarkerSetType
 from src.udp_server import UDPServer
 from src.Listener import Listener, ListenerType
@@ -77,39 +78,46 @@ def set_buttons(surface, grid_bottom_left):
     """
     Sets a dictionary with buttons to use in the program.
     """
-    buttons_size = (110, 70)
+    button_width_scale = BUTTON_BASE_WIDTH / BASE_WIDTH
+    button_height_scale = BUTTON_BASE_HEIGHT / BASE_HEIGHT
+    buttons_size = (button_width_scale * WIDTH, button_height_scale * HEIGHT)
+    font_size_scale = BUTTON_BASE_FONT_SIZE / BASE_WIDTH
+    font_size = int(font_size_scale * WIDTH)
+
+    # TODO: chengae to relative gap size according to window size
     left_gep = 10
     top_gap = 50
+
     buttons = {
         "random_scene": Button(text=['Make Random', 'Scene'],
                                pos=(LEFT_SCREEN_ALIGNMENT, grid_bottom_left + top_gap),
                                size=buttons_size, color=GEN_SCENE_BUTTON_COLOR,
                                surface=surface,
-                               font_size=BUTTON_BASE_FONT_SIZE),
+                               font_size=font_size),
         "goals_from_scene": Button(text=['Load Goals', 'from Scene'],
                                 pos=(LEFT_SCREEN_ALIGNMENT + buttons_size[0] + left_gep,
                                      grid_bottom_left + top_gap),
                                 size=buttons_size, color=GEN_SCENE_BUTTON_COLOR,
                                 surface=surface,
-                                font_size=BUTTON_BASE_FONT_SIZE),
+                                font_size=font_size),
         "goals_from_file": Button(text=['Load Goals', 'from File'],
                                 pos=(LEFT_SCREEN_ALIGNMENT + 2*(buttons_size[0] + left_gep),
                                      grid_bottom_left + top_gap),
                                 size=buttons_size, color=GEN_SCENE_BUTTON_COLOR,
                                 surface=surface,
-                                font_size=BUTTON_BASE_FONT_SIZE),
+                                font_size=font_size),
         "run_planner": Button(text=['Run Planner'],
                                 pos=(LEFT_SCREEN_ALIGNMENT + 3*(buttons_size[0] + left_gep),
                                      grid_bottom_left + top_gap),
                                 size=buttons_size, color=RUN_PLANNER_BUTTON_COLOR,
                                 surface=surface,
-                                font_size=BUTTON_BASE_FONT_SIZE),
+                                font_size=font_size),
         "broadcast": Button(text=['Broadcast Solution', 'and Data'],
                                 pos=(LEFT_SCREEN_ALIGNMENT + 4*(buttons_size[0] + left_gep),
                                      grid_bottom_left + top_gap),
                                 size=buttons_size, color=BROADCAST_BUTTON_COLOR,
                                 surface=surface,
-                                font_size=BUTTON_BASE_FONT_SIZE - 2)
+                                font_size=font_size - 2)
     }
 
     return buttons
@@ -145,6 +153,9 @@ def main():
 
     # init pygame
     pygame.init()
+    pygame.display.set_caption('CRL Robots System')
+    crl_icon = pygame.image.load('crl_logo.png')
+    pygame.display.set_icon(crl_icon)
     surface = pygame.display.set_mode(SCREENSIZE)
 
     # flag for transmitting solution data. being set to True if 'broadcast solution data' button is pressed.
