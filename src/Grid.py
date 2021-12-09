@@ -101,8 +101,6 @@ class Grid:
         self.end_bots = {}  # maps bot ID's to end spot (if one exists)
         self.bad_bots = []  # simple list of all robots that aren't completely on one cell
         self.out_of_bounds_bots = []  # simple list of all robots that aren't completely within the bounds of the arena
-        self.bot_boxes = []  # all the text boxes representing robots
-        self.end_boxes = []  # all the text boxes representing the robots' end locations
 
     def place_objects_on_grid(self):
         """
