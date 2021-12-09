@@ -4,8 +4,8 @@ import json
 import argparse
 import pygame
 
+from src import mockup
 from src.arguments_parser import ArgumentsParser
-import src.mockup
 
 from src.button import Button
 from src.globals import SCREENSIZE, LEFT_SCREEN_ALIGNMENT, BUTTON_BASE_FONT_SIZE, GEN_SCENE_BUTTON_COLOR, \
@@ -84,12 +84,12 @@ def set_buttons(surface, grid_bottom_left):
     font_size_scale = BUTTON_BASE_FONT_SIZE / BASE_WIDTH
     font_size = int(font_size_scale * WIDTH)
 
-    # TODO: chengae to relative gap size according to window size
+    # TODO: changae to relative gap size according to window size
     left_gep = 10
     top_gap = 50
 
     buttons = {
-        "random_scene": Button(text=['Make Random', 'Scene'],
+        "random_scene": Button(text=['Generate Random', 'Goals'],
                                pos=(LEFT_SCREEN_ALIGNMENT, grid_bottom_left + top_gap),
                                size=buttons_size, color=GEN_SCENE_BUTTON_COLOR,
                                surface=surface,
@@ -124,7 +124,6 @@ def set_buttons(surface, grid_bottom_left):
 
 
 def main():
-    # TODO: define and describe demo behavior (for easy run)
     # Parse command-line arguments
     # cell size, goal locations, solver, height, width
     # NOTE: currently, it is not possible to specify a complete scenario or map, and the actual scenario is
@@ -196,7 +195,6 @@ def main():
         if broadcast_solution_active:
             # the filter here is based on a convention -
             # all rigid bodies which represent robots have sequential ids starting from 101
-            # TODO: remove this convention and replace with generic solution
             robots_bodies = [body for body in listener.bodies if int(body.body_id) // 100 == 1]
 
             # duplication - running also under the planner in each iteration
@@ -211,7 +209,7 @@ def main():
             #   - corners positions
             # we need the additional data (beside the robots) for the arena visualization tool.
             # TODO: maybe find a different way to get the paths which does not include involving
-            #  the planner and grid objects (cohesion)
+            #  the planner and grid objects
             message = get_robots_state_to_send(robots_bodies, planner_controller.grid.solution_paths_translated,
                                                corners)
             server.update_data(json.dumps(message))
