@@ -24,9 +24,6 @@ class PlannerController():
         self.arguments_parser = arguments_parser
         self.SEND_SOLUTION = True
 
-        # TODO: find out how to get the distance between corners (from motive data) and pass it as x_dim and y_dim
-        #  to create a grid with the exact size as the arena.
-        #  later need to remove "restrict_arena" and fix coordinates translation everywhere
         self.rows = np.floor(self.arguments_parser.height / self.arguments_parser.cell_size)
         self.cols = np.floor(self.arguments_parser.width / self.arguments_parser.cell_size)
 

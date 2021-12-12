@@ -17,10 +17,9 @@ VERSION = 'BBBB'
 
 class MarkerSetType(Enum):
     NoType = 0  # default type for backward compatibility, consider removing if not necessary
-    Corner = 1
-    Obstacle = 2
-    Robot = 3
-    All = 4
+    Obstacle = 1
+    Robot = 2
+    All = 3
 
 class Version(object):
     """
@@ -118,7 +117,7 @@ class MarkerSet(object):
     Attributes:
         name (str): the marker set name
         positions (list[:class:`Position`]): a list of marker positions position
-        type: an enum specifies the marker set type (obstacle, robot, corner, etc.)
+        type: an enum specifies the marker set type (obstacle, robot, etc.)
     """
     def __init__(self, name, positions, type=MarkerSetType.NoType):
         self.name = name
@@ -609,8 +608,6 @@ class Protocol(object):
         name_lower = model_name.lower()
         if "obst" in name_lower:
             return MarkerSetType.Obstacle
-        elif "corner" in name_lower:
-            return MarkerSetType.Corner
         elif "all" in name_lower:
             return MarkerSetType.All
         else:

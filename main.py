@@ -11,18 +11,17 @@ from src.button import Button
 from src.globals import SCREENSIZE, LEFT_SCREEN_ALIGNMENT, BUTTON_BASE_FONT_SIZE, GEN_SCENE_BUTTON_COLOR, \
     RUN_PLANNER_BUTTON_COLOR, BROADCAST_BUTTON_COLOR, BASE_WIDTH, BUTTON_BASE_WIDTH, WIDTH, BUTTON_BASE_HEIGHT, \
     BASE_HEIGHT, HEIGHT
-from natnet.protocol import MarkerSetType
+
 from src.udp_server import UDPServer
 from src.Listener import Listener, ListenerType
 from src.planner_controller import PlannerController
 
 
-def get_robots_state_to_send(robots_bodies, solution_paths, corners):
+def get_robots_state_to_send(robots_bodies, solution_paths):
     """
     Args:
         robots_bodies: a list of robots' markers positions
         solution_paths: a dict (robot_id, solution) with solution paths
-        corners: a list of corners' markers positions
 
     Returns: a message to send - a list of objects encoded as dictionaries
     """
@@ -46,7 +45,6 @@ def get_robots_state_to_send(robots_bodies, solution_paths, corners):
 
     sorted_tosend = sorted(to_send, key=lambda k: k['body_id'])
     #sorted_tosend.append(solution_paths)
-    #sorted_tosend.append(corners)
     return sorted_tosend
 
 
@@ -197,21 +195,13 @@ def main():
             # all rigid bodies which represent robots have sequential ids starting from 101
             robots_bodies = [body for body in listener.bodies if int(body.body_id) // 100 == 1]
 
-            # duplication - running also under the planner in each iteration
-            # TODO: try to eliminate the duplicated calls
-            # need to remove 'type' from marker object because it is not serializable
-            corners = [ms.to_dict() for ms in listener.marker_sets if ms.type == MarkerSetType.Corner]
-            corners = [{k: v for k, v in corner.items() if k != 'type'} for corner in corners]
-
             # the transmitted message includes (in this order):
             #   - robots positions
             #   - solutions path (if exists, i.e., the planner was executed)
-            #   - corners positions
             # we need the additional data (beside the robots) for the arena visualization tool.
             # TODO: maybe find a different way to get the paths which does not include involving
             #  the planner and grid objects
-            message = get_robots_state_to_send(robots_bodies, planner_controller.grid.solution_paths_translated,
-                                               corners)
+            message = get_robots_state_to_send(robots_bodies, planner_controller.grid.solution_paths_translated)
             server.update_data(json.dumps(message))
             server.send_data()
             time.sleep(0.1)
