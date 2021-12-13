@@ -399,7 +399,7 @@ class Protocol(object):
             # print('Model Name: {}'.format(model_name))
 
             shift, positions = self.unpack_positions(data[offset:])
-            ms_type = self.get_markerset_type_from_name(model_name)  # TODO: test against real data from motive
+            ms_type = self.get_markerset_type_from_name(model_name)
             marker_sets.append(MarkerSet(model_name, positions, ms_type))
             offset += shift
 
@@ -611,6 +611,4 @@ class Protocol(object):
         elif "all" in name_lower:
             return MarkerSetType.All
         else:
-            # TODO: consider defining the names of robots in motive with suffix 'Robot_' and then change the
-            #  condition here, where default value is MarkerSetType.NoType
             return MarkerSetType.Robot

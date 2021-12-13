@@ -199,9 +199,7 @@ def main():
             #   - robots positions
             #   - solutions path (if exists, i.e., the planner was executed)
             # we need the additional data (beside the robots) for the arena visualization tool.
-            # TODO: maybe find a different way to get the paths which does not include involving
-            #  the planner and grid objects
-            message = get_robots_state_to_send(robots_bodies, planner_controller.grid.solution_paths_translated)
+            message = get_robots_state_to_send(robots_bodies, planner_controller.grid.solution_paths_on_grid)
             server.update_data(json.dumps(message))
             server.send_data()
             time.sleep(0.1)

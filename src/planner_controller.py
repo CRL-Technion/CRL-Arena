@@ -6,21 +6,19 @@ import pygame
 from src.Grid import Grid
 from natnet.protocol import MarkerSetType
 
-DATA_PATH = "data/"  # TODO: move to shared "util" files for global variables or make a class variable
-UBUNTU_DIR = "crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent/run/setup_files"
-# TODO: move to shared "util" files for global variables or make a class variable
 
-
-class PlannerController():
+class PlannerController:
     def __init__(self, arguments_parser, listener, surface):
         super(PlannerController, self).__init__()
 
         self.listener = listener
 
-        self.algorithm_output = DATA_PATH + 'algorithm_output'
-        self.scenario_data = DATA_PATH + 'scenario_data'
+        self.data_path = "data/"
+        self.ubuntu_dir = "crl-user@crl-mocap2:/home/crl-user/turtlebot3_ws/src/multi_agent/run/setup_files"
+        self.algorithm_output = self.data_path + 'algorithm_output'
+        self.scenario_data = self.data_path + 'scenario_data'
         self.scene_name = arguments_parser.scene.split('.')[0]  # clean scenario name without .scen suffix
-        self.paths_filename = DATA_PATH + self.scene_name + '_paths.txt'
+        self.paths_filename = self.data_path + self.scene_name + '_paths.txt'
         self.arguments_parser = arguments_parser
         self.SEND_SOLUTION = True
 
@@ -31,9 +29,9 @@ class PlannerController():
         self.grid = Grid(cell_size=self.arguments_parser.cell_size,
                          rows=self.rows,
                          cols=self.cols,
-                         map_filename=DATA_PATH + self.arguments_parser.map,
-                         scene_filename=DATA_PATH + self.arguments_parser.scene,
-                         goal_locations=DATA_PATH + self.arguments_parser.goals,
+                         map_filename=self.data_path + self.arguments_parser.map,
+                         scene_filename=self.data_path + self.arguments_parser.scene,
+                         goal_locations=self.data_path + self.arguments_parser.goals,
                          algorithm_output=self.algorithm_output,
                          paths_filename=self.paths_filename,
                          surface=surface)
@@ -53,7 +51,7 @@ class PlannerController():
         # (robot_id, MarkersSet)
         robots = [(ms.name[ms.name.index('-')+1::], ms) for ms in marker_sets if ms.type == MarkerSetType.Robot]
 
-        self.grid.reset_grid()  # TODO: find a way to clean grid objject inplace instead of reset every cycle
+        self.grid.reset_grid()  # TODO: find a way to clean grid object inplace instead of reset every cycle
         self.grid.add_obstacles(obstacles)  # TODO: only if obstacles changed
         self.grid.add_robots(robots, tolerance=0)  # TODO: only if robots moved
 
@@ -77,8 +75,8 @@ class PlannerController():
         Running the MAPF planner and sending the solution to ubuntu computer if SEND_SOLUTION flag is turned on
         """
         print("Planner Called")
-        os.system(f'wsl ~/CBSH2-RTC/cbs -m {DATA_PATH + self.arguments_parser.map} '
-                  f'-a {DATA_PATH + self.arguments_parser.scene} -o test.csv --outputPaths={self.paths_filename} '
+        os.system(f'wsl ~/CBSH2-RTC/cbs -m {self.data_path + self.arguments_parser.map} '
+                  f'-a {self.data_path + self.arguments_parser.scene} -o test.csv --outputPaths={self.paths_filename} '
                   f'-k {len(self.grid.bots)} -t 60')
         print("Planner finished!")
         self.grid.has_paths = True
@@ -86,7 +84,7 @@ class PlannerController():
 
         # sending the solution and additional acenario data to ubuntu computer for execution
         if self.SEND_SOLUTION:
-            os.system(f'pscp -pw qawsedrf {self.algorithm_output} {UBUNTU_DIR}')  # send solution paths
+            os.system(f'pscp -pw qawsedrf {self.algorithm_output} {self.ubuntu_dir}')  # send solution paths
 
             with open(self.scenario_data, 'w') as scenario_data_file:
                 # prepare scenario data file to be used for automatically running the robots from ubuntu computer.
@@ -99,7 +97,7 @@ class PlannerController():
                     scenario_data_file.write(f"{rid},")
                 scenario_data_file.write("\n")
                 scenario_data_file.write(f"cell_size:{self.arguments_parser.cell_size}")  # format: "cell_size:<cell_size>"
-            os.system(f'pscp -pw qawsedrf {self.scenario_data} {UBUNTU_DIR}')  # send scenario peripheral data
+            os.system(f'pscp -pw qawsedrf {self.scenario_data} {self.ubuntu_dir}')  # send scenario peripheral data
 
     def paths_to_plan(self):
         """

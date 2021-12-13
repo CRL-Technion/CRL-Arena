@@ -31,7 +31,6 @@ class ListenerMock:
     If you want to run a test with a scenario that doesn't exists in the mockups list, add a new mockup.
     
 """
-# TODO: Create an external db (or file) with mocks and read the relevant one from it
 
 # Simple listener for init state only, with two agents
 simple_listener_mock = ListenerMock(

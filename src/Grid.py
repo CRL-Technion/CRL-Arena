@@ -94,7 +94,6 @@ class Grid:
         self.has_paths = False
         # saves path after running the solver (for external visualization)
         self.solution_paths_on_grid = {}
-        self.solution_paths_translated = {}  # TODO: remove and use self.solution_paths_on_grid
 
         ## Robots management parameters
         self.bots = {}  # maps bot IDs to current spot, NOTE that locations are saved as (y,x)
@@ -561,8 +560,6 @@ class Grid:
 
         return True
 
-
-
     def generate_scen_file(self):
         """
         Generates a .scen file with all scenario data, given that goal locations already been chosen
@@ -644,7 +641,6 @@ class Grid:
         """
         Returns the shortest distance between two location on the grid using A* algorithm.
         """
-        # TODO: need to debug this call and verify that it's not crashing from time to time
         res = astar.find_path(loc1, loc2,
                               neighbors_fnct=lambda loc: self.neighbors(loc, diagonal_moves=False),
                               heuristic_cost_estimate_fnct=self.heuristic,
@@ -699,7 +695,6 @@ class Grid:
         """
         Checks that a marker is located within the grid's boundaries (compares to ranges of lab's coordinates)
         """
-        # TODO: verify x and y correctness
         return (self.y_range[1] >= marker_cell[0] >= self.y_range[0]) \
                and (self.x_range[1] >= marker_cell[1] >= self.x_range[0])
 
@@ -726,14 +721,6 @@ class Grid:
 
 
 if __name__ == "__main__":
-    # Testing the optimal length function
-    env = Grid(12, 12)
-    m, n = env.rows, env.cols
-    start_x = np.random.randint(0, m)
-    start_y = np.random.randint(0, n)
-    goal_x = np.random.randint(0, m)
-    goal_y = np.random.randint(0, n)
-
-    print(env.get_optimal_length((start_x, start_y), (goal_x, goal_y)))
+    print("Main function not implemented")
 
 
