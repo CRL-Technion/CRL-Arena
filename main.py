@@ -91,7 +91,7 @@ def set_buttons(surface, grid_bottom_left):
                                pos=(LEFT_SCREEN_ALIGNMENT, grid_bottom_left + top_gap),
                                size=buttons_size, color=GEN_SCENE_BUTTON_COLOR,
                                surface=surface,
-                               font_size=font_size),
+                               font_size=font_size - 2),
         "goals_from_scene": Button(text=['Load Goals', 'from Scene'],
                                 pos=(LEFT_SCREEN_ALIGNMENT + buttons_size[0] + left_gep,
                                      grid_bottom_left + top_gap),
