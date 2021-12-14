@@ -17,11 +17,10 @@ from src.Listener import Listener, ListenerType
 from src.planner_controller import PlannerController
 
 
-def get_robots_state_to_send(robots_bodies, solution_paths):
+def get_robots_state_to_send(robots_bodies):
     """
     Args:
         robots_bodies: a list of robots' markers positions
-        solution_paths: a dict (robot_id, solution) with solution paths
 
     Returns: a message to send - a list of objects encoded as dictionaries
     """
@@ -44,7 +43,6 @@ def get_robots_state_to_send(robots_bodies, solution_paths):
         to_send.append(body_dict)
 
     sorted_tosend = sorted(to_send, key=lambda k: k['body_id'])
-    #sorted_tosend.append(solution_paths)
     return sorted_tosend
 
 
@@ -199,7 +197,7 @@ def main():
             #   - robots positions
             #   - solutions path (if exists, i.e., the planner was executed)
             # we need the additional data (beside the robots) for the arena visualization tool.
-            message = get_robots_state_to_send(robots_bodies, planner_controller.grid.solution_paths_on_grid)
+            message = get_robots_state_to_send(robots_bodies)
             server.update_data(json.dumps(message))
             server.send_data()
             time.sleep(0.1)

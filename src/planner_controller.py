@@ -96,7 +96,12 @@ class PlannerController:
                 for rid in robots_ids:
                     scenario_data_file.write(f"{rid},")
                 scenario_data_file.write("\n")
-                scenario_data_file.write(f"cell_size:{self.arguments_parser.cell_size}")  # format: "cell_size:<cell_size>"
+                scenario_data_file.write(f"cell_size:{self.arguments_parser.cell_size}\n")  # format: "cell_size:<cell_size>"
+                scenario_data_file.write(f"height:{self.arguments_parser.height}\n")
+                scenario_data_file.write(f"width:{self.arguments_parser.width}\n")
+                scenario_data_file.write(f"solution:\n")
+                for id, path in self.grid.solution_paths_on_grid.items():
+                    scenario_data_file.write(f"{id}:{path}\n")
             os.system(f'pscp -pw qawsedrf {self.scenario_data} {self.ubuntu_dir}')  # send scenario peripheral data
 
     def paths_to_plan(self):

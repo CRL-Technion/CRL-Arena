@@ -427,6 +427,10 @@ class Grid:
         return np.floor(loc[0] / self.cell_size), -np.floor(loc[1] / self.cell_size)
 
     def cell_to_grid_cell(self, loc):
+        """
+        Converts y and x from Lab's coordinates system to Grid coordinates system -- row and column
+        Returns as (row, column)
+        """
         new_origin = (self.y_range[1], self.x_range[0])  # loc is already (y, x) in lab's coords
         return int(np.abs(new_origin[0] - loc[0])), int(np.abs(new_origin[1] - loc[1]))
 
